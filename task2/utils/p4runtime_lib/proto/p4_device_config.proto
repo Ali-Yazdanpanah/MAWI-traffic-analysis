@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+// Must match p4lang/PI proto/p4/tmp/p4config.proto (field numbers).
+package p4.tmp;
+
+message P4DeviceConfig {
+  message Extras {
+    map<string, string> kv = 1;
+  }
+  bool reassign = 1;
+  Extras extras = 2;
+  bytes device_data = 3;
+}

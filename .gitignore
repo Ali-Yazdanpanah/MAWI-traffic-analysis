@@ -1,0 +1,46 @@
+# --- Python ---
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Editors / OS ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# --- MAWI / trace data (large; place manually at repo root) ---
+201302011400.csv
+201302011400.jsonl
+201302011400.dump.gz
+201302011400.pcap
+201302011400.*
+*.dump.gz
+
+# --- Generated analysis outputs (regenerate via plot_analysis / run_pipeline) ---
+task1/results/
+task2/results/
+
+# --- Runtime / intermediate data (regenerate via extraction, test-mawi, trace-prepare) ---
+task1/data/
+task2/data/*
+!task2/data/.gitkeep
+
+# --- Task II BMv2 / Mininet (see task2/.gitignore for detail) ---
+task2/build/
+task2/pcaps/
+task2/logs/
+task2/build-test/

@@ -1,0 +1,17 @@
+# Task II local outputs (repo root .gitignore also applies)
+
+build/
+pcaps/
+logs/
+build-test/
+results/
+data/*
+!data/.gitkeep
+*.pcap
+*.log
+
+# Python / editors (when working only inside task2/)
+__pycache__/
+*.py[cod]
+.venv/
+venv/

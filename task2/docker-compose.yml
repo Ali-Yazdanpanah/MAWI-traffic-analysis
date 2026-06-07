@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  p4-env:
+    platform: linux/amd64
+    build:
+      context: ..
+      dockerfile: task2/Dockerfile
+    image: task2/p4mn:local
+    container_name: task2-p4-env
+    privileged: true
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    tty: true
+    stdin_open: true
+    volumes:
+      - ./:/p4
+      - ../:/repo:ro
+    working_dir: /p4
+    entrypoint: ["/bin/bash", "-lc"]
+    # Keep container running in background for interactive use.
+    command: tail -f /dev/null

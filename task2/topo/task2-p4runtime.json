@@ -1,0 +1,17 @@
+{
+  "target": "bmv2",
+  "p4info": "build/task2.p4.p4info.txtpb",
+  "bmv2_json": "build/task2.json",
+  "clone_session_entries": [
+    {
+      "clone_session_id": 1,
+      "replicas": [
+        {
+          "egress_port": 2,
+          "instance": 1
+        }
+      ],
+      "packet_length_bytes": 0
+    }
+  ]
+}
