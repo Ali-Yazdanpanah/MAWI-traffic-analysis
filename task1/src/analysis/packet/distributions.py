@@ -134,6 +134,31 @@ def plot_iat_ccdf(packets: pd.DataFrame, out_dir: Path) -> Path:
     )
 
 
+def _plot_iat_ccdf_transport(packets: pd.DataFrame, out_dir: Path, proto: str) -> Path | None:
+    labels = packets["transport_proto"].fillna("unknown").astype(str).str.lower()
+    subset = packets.loc[labels == proto]
+    values = positive(subset["time_delta"])
+    if len(values) < MIN_GROUP_PACKETS:
+        return None
+    color = PROTOCOL_COLORS.get(proto, "#2563eb")
+    return plot_ccdf(
+        values,
+        out_path=out_dir / f"iat_ccdf_{proto}.png",
+        xlabel="inter-arrival time (s, log scale)",
+        title=f"CCDF — inter-arrival time ({proto.upper()}) {title_suffix(subset)}",
+        log_x=True,
+        color=color,
+    )
+
+
+def plot_iat_ccdf_tcp(packets: pd.DataFrame, out_dir: Path) -> Path | None:
+    return _plot_iat_ccdf_transport(packets, out_dir, "tcp")
+
+
+def plot_iat_ccdf_udp(packets: pd.DataFrame, out_dir: Path) -> Path | None:
+    return _plot_iat_ccdf_transport(packets, out_dir, "udp")
+
+
 def plot_frame_len_ccdf(packets: pd.DataFrame, out_dir: Path) -> Path:
     return plot_ccdf(
         positive(packets["frame_len"]),
@@ -161,7 +186,7 @@ def plot_all(
         category=PACKET_DISTRIBUTION,
         results_root=results_root,
     )
-    return [
+    paths = [
         plot_iat_pdf(packets, output),
         plot_frame_len_pdf(packets, output),
         plot_frame_len_pdf_data_only(packets, output),
@@ -171,3 +196,8 @@ def plot_all(
         plot_iat_ccdf(packets, output),
         plot_frame_len_ccdf(packets, output),
     ]
+    for plot_fn in (plot_iat_ccdf_tcp, plot_iat_ccdf_udp):
+        path = plot_fn(packets, output)
+        if path is not None:
+            paths.append(path)
+    return paths

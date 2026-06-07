@@ -58,6 +58,21 @@ def parseGrpcErrorBinaryDetails(grpc_error):
     return indexed_p4_errors
 
 
+def grpc_error_is_already_exists(grpc_error: grpc.RpcError) -> bool:
+    """True when BMv2 reports a duplicate PRE/table entry (often as UNKNOWN + batch detail)."""
+    if grpc_error.code() == grpc.StatusCode.ALREADY_EXISTS:
+        return True
+    if grpc_error.code() != grpc.StatusCode.UNKNOWN:
+        return False
+    try:
+        p4_errors = parseGrpcErrorBinaryDetails(grpc_error)
+    except P4RuntimeErrorFormatException:
+        return False
+    if not p4_errors:
+        return False
+    return any(err.canonical_code == code_pb2.ALREADY_EXISTS for _, err in p4_errors)
+
+
 # P4Runtime uses a 3-level message in case of an error during the processing of
 # a write batch. This means that some care is required when printing the
 # exception if we do not want to end-up with a non-helpful message in case of

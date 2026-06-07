@@ -4,7 +4,6 @@ build/
 pcaps/
 logs/
 build-test/
-results/
 data/*
 !data/.gitkeep
 *.pcap

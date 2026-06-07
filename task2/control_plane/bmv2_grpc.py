@@ -12,7 +12,7 @@ try:
 except ImportError:  # older p4runtime bundles
     p4data_pb2 = p4runtime_pb2  # type: ignore[misc, assignment]
 
-from paths import task2_root
+from repo_paths import task2_root
 
 NUM_FLOWS = 16384
 DEFAULT_GRPC_ADDR = "127.0.0.1:50051"
@@ -252,24 +252,35 @@ class Bmv2GrpcClient:
             session_id,
             [{"egress_port": egress_port, "instance": 1}],
         )
-        self._sw.WritePREEntry(clone_entry)
+        self._sw.UpsertPREEntry(clone_entry)
 
     def set_telemetry_export_mode(self, mode: str) -> None:
-        action_map = {
-            "inband": "MyIngress.set_export_inband",
-            "udp": "MyIngress.set_export_udp",
-            "both": "MyIngress.set_export_both",
+        mode_values = {
+            "inband": 0,
+            "udp": 1,
+            "both": 2,
         }
-        if mode not in action_map:
-            raise ValueError(f"unknown export mode {mode!r}; expected one of {sorted(action_map)}")
+        if mode not in mode_values:
+            raise ValueError(f"unknown export mode {mode!r}; expected one of {sorted(mode_values)}")
+        match_fields = {"standard_metadata.ingress_port": 1}
+        delete_entry = self.p4info.buildTableEntry(
+            table_name="MyIngress.configure_export_mode",
+            match_fields=match_fields,
+        )
+        try:
+            self._sw.DeleteTableEntry(delete_entry)
+        except Exception:
+            pass
         table_entry = self.p4info.buildTableEntry(
             table_name="MyIngress.configure_export_mode",
-            match_fields={"standard_metadata.ingress_port": 1},
-            action_name=action_map[mode],
+            match_fields=match_fields,
+            action_name="MyIngress.set_export_mode",
+            action_params={"mode": mode_values[mode]},
         )
         self._sw.WriteTableEntry(table_entry)
         if mode in ("udp", "both"):
             self.configure_int_clone_session()
+            print(f"Configured INT clone session 1 -> egress port 2 (mode={mode}).")
 
 
 def reset_telemetry_registers(

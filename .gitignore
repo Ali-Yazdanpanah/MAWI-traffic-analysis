@@ -30,10 +30,6 @@ Thumbs.db
 201302011400.*
 *.dump.gz
 
-# --- Generated analysis outputs (regenerate via plot_analysis / run_pipeline) ---
-task1/results/
-task2/results/
-
 # --- Runtime / intermediate data (regenerate via extraction, test-mawi, trace-prepare) ---
 task1/data/
 task2/data/*

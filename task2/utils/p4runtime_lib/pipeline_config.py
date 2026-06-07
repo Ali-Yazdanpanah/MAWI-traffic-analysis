@@ -10,6 +10,7 @@ from p4.config.v1 import p4info_pb2
 from p4.v1 import p4runtime_pb2
 
 from .bmv2 import Bmv2SwitchConnection
+from .helper import P4InfoHelper
 
 
 def _resolve_path(workdir: Path, configured: str) -> Path:
@@ -72,6 +73,37 @@ def build_set_pipeline_request(
     return request
 
 
+def apply_runtime_pre_entries(
+    *,
+    grpc_addr: str,
+    device_id: int,
+    runtime_json: str | Path,
+    workdir: str | Path | None = None,
+) -> None:
+    """Install clone/multicast PRE entries declared in the runtime JSON."""
+    runtime_path = Path(runtime_json).resolve()
+    with runtime_path.open(encoding="utf-8") as handle:
+        conf = json.load(handle)
+    clone_entries = conf.get("clone_session_entries") or []
+    if not clone_entries:
+        return
+
+    p4info_path, _ = load_runtime_paths(runtime_json, workdir=workdir)
+    p4info = P4InfoHelper(str(p4info_path))
+    sw = Bmv2SwitchConnection(name="runtime-pre", address=grpc_addr, device_id=device_id)
+    try:
+        sw.MasterArbitrationUpdate()
+        for entry in clone_entries:
+            clone_entry = p4info.buildCloneSessionEntry(
+                entry["clone_session_id"],
+                entry["replicas"],
+                entry.get("packet_length_bytes", 0),
+            )
+            sw.UpsertPREEntry(clone_entry)
+    finally:
+        sw.shutdown()
+
+
 def push_forwarding_pipeline(
     *,
     grpc_addr: str,
@@ -106,6 +138,7 @@ def push_from_runtime_json(
     runtime_json: str | Path,
     workdir: str | Path | None = None,
     proto_dump_file: str | None = None,
+    apply_pre_entries: bool = True,
 ) -> None:
     p4info_path, bmv2_json_path = load_runtime_paths(runtime_json, workdir=workdir)
     push_forwarding_pipeline(
@@ -115,3 +148,10 @@ def push_from_runtime_json(
         bmv2_json_path=bmv2_json_path,
         proto_dump_file=proto_dump_file,
     )
+    if apply_pre_entries:
+        apply_runtime_pre_entries(
+            grpc_addr=grpc_addr,
+            device_id=device_id,
+            runtime_json=runtime_json,
+            workdir=workdir,
+        )

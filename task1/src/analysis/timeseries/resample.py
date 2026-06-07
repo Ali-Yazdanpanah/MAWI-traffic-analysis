@@ -125,6 +125,12 @@ def time_axis_values(
 
 def style_time_xaxis(ax: plt.Axes, duration_s: float, *, use_datetime: bool) -> None:
     """Apply tick formatting after plotting (call once data are on the axes)."""
+    if use_datetime:
+        xmin, xmax = ax.get_xlim()
+        # Guard against numeric unix/BMv2 seconds on a date axis (matplotlib ordinals are ~2e5).
+        if xmax > 1_000_000 or xmin > 1_000_000:
+            use_datetime = False
+
     if not use_datetime:
         ax.xaxis.set_major_locator(MaxNLocator(nbins=8, min_n_ticks=4))
         if duration_s < RELATIVE_MS_THRESHOLD_S:

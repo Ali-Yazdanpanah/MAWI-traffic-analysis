@@ -22,17 +22,19 @@ if [[ "$CAPTURE_MODE" == "pcap" ]]; then
     exec tcpdump -i "$IFACE" -s 0 -w "$OUT" -c "$COUNT"
 fi
 
-capture_args=(
-    python3 "$P4_ROOT/control_plane/capture_packets.py"
-    --interface "$IFACE"
-    -n "$COUNT"
-    --timeout "$CAPTURE_TIMEOUT"
-    -o "$OUT"
-)
 if [[ "$CAPTURE_MODE" == "udp" ]]; then
     echo "UDP INT capture: up to $COUNT reports on $IFACE port $INT_UDP_PORT -> $OUT"
-    capture_args+=(--int-udp --udp-port "$INT_UDP_PORT")
-else
-    echo "Live in-band sniff: up to $COUNT frames on $IFACE -> $OUT"
+    exec python3 "$P4_ROOT/control_plane/capture_udp_int.py" \
+        --interface "$IFACE" \
+        -n "$COUNT" \
+        --timeout "$CAPTURE_TIMEOUT" \
+        --udp-port "$INT_UDP_PORT" \
+        -o "$OUT"
 fi
-exec "${capture_args[@]}"
+
+echo "Live in-band sniff: up to $COUNT frames on $IFACE -> $OUT"
+exec python3 "$P4_ROOT/control_plane/capture_inband.py" \
+    --interface "$IFACE" \
+    -n "$COUNT" \
+    --timeout "$CAPTURE_TIMEOUT" \
+    -o "$OUT"

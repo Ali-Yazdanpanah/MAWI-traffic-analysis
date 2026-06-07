@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Any, Callable
+from typing import Any, Callable, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,7 +12,7 @@ from scipy import stats
 
 from analysis.plot_common import FIGSIZE, save_figure, use_plot_style
 
-DistributionSpec = tuple[str, Callable[..., tuple[float, ...]], int]
+DistributionSpec = Tuple[str, Callable[..., Tuple[float, ...]], int]
 
 # (label, scipy rv, free-parameter count with floc=0 where applicable)
 CANDIDATE_DISTRIBUTIONS: dict[str, DistributionSpec] = {
@@ -55,12 +55,48 @@ def _param_names(dist_name: str, param_tuple: tuple[float, ...]) -> dict[str, fl
 def _rv(dist_name: str):
     mapping = {
         "exponential": stats.expon,
+        "poisson": stats.expon,
         "lognormal": stats.lognorm,
         "pareto": stats.pareto,
         "weibull": stats.weibull_min,
         "gamma": stats.gamma,
     }
     return mapping[dist_name]
+
+
+def _fit_poisson_process_iat(values: np.ndarray, *, dataset: str) -> FitResult | None:
+    """Poisson arrivals => exponential inter-arrival times (rate lambda = 1 / mean IAT)."""
+    data = np.asarray(values, dtype=float)
+    data = data[np.isfinite(data)]
+    data = data[data > 0]
+    if len(data) < 10:
+        return None
+
+    try:
+        params = stats.expon.fit(data, floc=0)
+    except (FloatingPointError, ValueError, RuntimeError):
+        return None
+
+    mean_iat = float(np.mean(data))
+    rate = 1.0 / mean_iat
+    rv = stats.expon
+    ks_stat, ks_p = stats.kstest(data, rv.cdf, args=params)
+    ll = _log_likelihood(data, "exponential", params)
+    n_params = 1
+    aic = 2 * n_params - 2 * ll
+    bic = n_params * np.log(len(data)) - 2 * ll
+
+    return FitResult(
+        dataset=dataset,
+        distribution="poisson",
+        n=len(data),
+        params={"lambda": rate, "mean_iat": mean_iat, "scale": float(params[1])},
+        ks_statistic=float(ks_stat),
+        ks_pvalue=float(ks_p),
+        aic=float(aic),
+        bic=float(bic),
+        log_likelihood=float(ll),
+    )
 
 
 def _log_likelihood(values: np.ndarray, dist_name: str, param_tuple: tuple[float, ...]) -> float:
@@ -77,6 +113,9 @@ def fit_single(
     dataset: str,
     dist_key: str,
 ) -> FitResult | None:
+    if dist_key == "poisson":
+        return _fit_poisson_process_iat(values, dataset=dataset)
+
     if dist_key not in CANDIDATE_DISTRIBUTIONS:
         raise ValueError(f"Unknown distribution: {dist_key}")
 
@@ -156,7 +195,9 @@ def best_fit(values: np.ndarray, *, dataset: str, candidates: tuple[str, ...] = 
 
 
 def _params_tuple(dist_name: str, params: dict[str, float]) -> tuple[float, ...]:
-    if dist_name == "exponential":
+    if dist_name in ("exponential", "poisson"):
+        if dist_name == "poisson" and "lambda" in params and params["lambda"] > 0:
+            return (0.0, 1.0 / params["lambda"])
         return (params.get("loc", 0.0), params["scale"])
     return (params["shape"], params.get("loc", 0.0), params["scale"])
 
@@ -203,7 +244,7 @@ def plot_pdf_with_fit(
         y,
         color="#E64B35",
         linewidth=2.0,
-        label=f"{fit.distribution} (KS p={fit.ks_pvalue:.2e})",
+        label=f"{fit.distribution} (KS D={fit.ks_statistic:.3f}, p={fit.ks_pvalue:.1e})",
     )
 
     if log_x:

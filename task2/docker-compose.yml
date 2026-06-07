@@ -19,6 +19,5 @@ services:
       - ./:/p4
       - ../:/repo:ro
     working_dir: /p4
-    entrypoint: ["/bin/bash", "-lc"]
-    # Keep container running in background for interactive use.
-    command: tail -f /dev/null
+    # docker_entrypoint.sh installs /repo/requirements.txt on start (see Dockerfile).
+    command: ["tail", "-f", "/dev/null"]

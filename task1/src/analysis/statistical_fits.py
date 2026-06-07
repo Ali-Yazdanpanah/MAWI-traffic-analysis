@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -34,6 +35,9 @@ from analysis.results_paths import (  # noqa: E402
 
 MIN_FIT_SAMPLES = max(MIN_GROUP_PACKETS, 10)
 
+# Heavy-tailed flow metrics (size, duration, throughput) need pareto in the mix.
+HEAVY_TAIL_CANDIDATES = ("lognormal", "pareto", "weibull", "gamma", "exponential")
+
 _METRIC_SPECS: tuple[dict[str, Any], ...] = (
     {
         "id": "iat",
@@ -43,7 +47,10 @@ _METRIC_SPECS: tuple[dict[str, Any], ...] = (
         "column": "time_delta",
         "log_x": True,
         "log_y": True,
-        "candidates": ("exponential", "lognormal", "weibull", "gamma"),
+        "candidates": ("poisson", "exponential", "lognormal", "weibull", "gamma"),
+        # Poisson arrivals are the reference model for IAT; always headline it
+        # even when a heavier-tailed law scores a marginally lower AIC.
+        "primary_fit": "poisson",
     },
     {
         "id": "frame_len",
@@ -63,7 +70,7 @@ _METRIC_SPECS: tuple[dict[str, Any], ...] = (
         "column": "duration",
         "log_x": True,
         "log_y": True,
-        "candidates": DEFAULT_CANDIDATES,
+        "candidates": HEAVY_TAIL_CANDIDATES,
     },
     {
         "id": "flow_byte_sum",
@@ -73,7 +80,7 @@ _METRIC_SPECS: tuple[dict[str, Any], ...] = (
         "column": "byte_sum",
         "log_x": True,
         "log_y": True,
-        "candidates": DEFAULT_CANDIDATES,
+        "candidates": HEAVY_TAIL_CANDIDATES,
     },
     {
         "id": "flow_throughput",
@@ -83,7 +90,7 @@ _METRIC_SPECS: tuple[dict[str, Any], ...] = (
         "column": "throughput_bps",
         "log_x": True,
         "log_y": True,
-        "candidates": DEFAULT_CANDIDATES,
+        "candidates": HEAVY_TAIL_CANDIDATES,
     },
 )
 
@@ -214,23 +221,57 @@ def _fit_metric(
         comparison.to_csv(csv_path, index=False)
         paths.append(csv_path)
 
-    best = comparison.iloc[0]
-    fit = fit_result_from_row(best, dataset=dataset_id)
+    # Headline the configured primary distribution when present (e.g. Poisson for
+    # IAT); otherwise fall back to the lowest-AIC candidate.
+    chosen = comparison.iloc[0]
+    fit_kind = "best"
+    primary = metric.get("primary_fit")
+    if primary:
+        match = comparison[comparison["distribution"] == primary]
+        if not match.empty:
+            chosen = match.iloc[0]
+            fit_kind = primary
+
+    fit = fit_result_from_row(chosen, dataset=dataset_id)
     row = fit.to_dict()
     row["label"] = metric["label"]
     row["caption"] = fit_summary_caption(fit)
 
-    pdf_path = plots_dir / f"{dataset_id}_pdf_fit.png"
-    plot_pdf_with_fit(
-        positive_values,
-        fit,
-        out_path=pdf_path,
-        xlabel=metric["xlabel"],
-        title=f"{metric['label']} PDF + best fit {title_suffix_text}",
-        log_x=metric["log_x"],
-        log_y=metric["log_y"],
+    fit_word = fit.distribution if fit_kind != "best" else "best fit"
+    base_title = f"{metric['label']} PDF + {fit_word} {title_suffix_text}"
+
+    # Emit the PDF+fit at the configured "primary" scale (kept as `_pdf_fit.png`
+    # for the notebook / segment copies) plus semi-log (log-x, linear-y) and
+    # linear (linear-x, linear-y) variants. Linear/semi-log expose bulk-region
+    # misfit that log-log hides; together they let the reader judge GoF by eye.
+    _SCALE_TAGS = {
+        (True, True): "log-log",
+        (True, False): "semi-log (log-x)",
+        (False, False): "linear",
+        (False, True): "linear-x, log-y",
+    }
+    pdf_variants = (
+        ("", bool(metric["log_x"]), bool(metric["log_y"])),  # primary scale
+        ("_semilog", True, False),
+        ("_linear", False, False),
     )
-    paths.append(pdf_path)
+    seen_scales: set[tuple[bool, bool]] = set()
+    for suffix, log_x, log_y in pdf_variants:
+        scale_key = (log_x, log_y)
+        if suffix and scale_key in seen_scales:
+            continue  # skip a variant that duplicates the primary scale
+        seen_scales.add(scale_key)
+        variant_path = plots_dir / f"{dataset_id}_pdf_fit{suffix}.png"
+        plot_pdf_with_fit(
+            positive_values,
+            fit,
+            out_path=variant_path,
+            xlabel=metric["xlabel"],
+            title=f"{base_title} [{_SCALE_TAGS[scale_key]}]",
+            log_x=log_x,
+            log_y=log_y,
+        )
+        paths.append(variant_path)
 
     qq_path = plots_dir / f"{dataset_id}_qq.png"
     plot_qq(
@@ -243,6 +284,56 @@ def _fit_metric(
     return paths, row
 
 
+def _attach_overall_fits_to_segment(
+    breakdown: dict[str, Any],
+    *,
+    overall_by_metric: dict[str, dict[str, Any]],
+    root_tables_dir: Path,
+    root_plots_dir: Path,
+    segment_tables: Path,
+    segment_plots: Path,
+) -> tuple[list[Path], list[dict[str, Any]]]:
+    """Copy aggregate fits into a segment folder for side-by-side comparison."""
+    paths: list[Path] = []
+    rows: list[dict[str, Any]] = []
+    segment_id = breakdown["id"]
+    metric_ids = tuple(breakdown["packet_metrics"]) + tuple(breakdown["flow_metrics"])
+
+    for metric_id in metric_ids:
+        overall_row = overall_by_metric.get(metric_id)
+        if overall_row is None:
+            continue
+
+        dataset_id = f"{metric_id}__all"
+        row = dict(overall_row)
+        row["dataset"] = dataset_id
+        row["segment"] = segment_id
+        row["segment_label"] = breakdown["label"]
+        row["group"] = "all"
+        rows.append(row)
+
+        candidates_src = root_tables_dir / f"{metric_id}_candidates.csv"
+        if candidates_src.is_file():
+            candidates_dst = segment_tables / f"{dataset_id}_candidates.csv"
+            shutil.copy2(candidates_src, candidates_dst)
+            paths.append(candidates_dst)
+
+        for suffix in (
+            "_pdf_fit.png",
+            "_pdf_fit_semilog.png",
+            "_pdf_fit_linear.png",
+            "_qq.png",
+        ):
+            src = root_plots_dir / f"{metric_id}{suffix}"
+            if not src.is_file():
+                continue
+            dst = segment_plots / f"{dataset_id}{suffix}"
+            shutil.copy2(src, dst)
+            paths.append(dst)
+
+    return paths, rows
+
+
 def _run_breakdown_fits(
     breakdown: dict[str, Any],
     packets: pd.DataFrame,
@@ -250,6 +341,7 @@ def _run_breakdown_fits(
     *,
     tables_dir: Path,
     plots_dir: Path,
+    overall_by_metric: dict[str, dict[str, Any]] | None = None,
 ) -> tuple[list[Path], list[dict[str, Any]]]:
     paths: list[Path] = []
     rows: list[dict[str, Any]] = []
@@ -258,6 +350,18 @@ def _run_breakdown_fits(
     segment_plots = plots_dir / "by_segment" / segment_id
     segment_tables.mkdir(parents=True, exist_ok=True)
     segment_plots.mkdir(parents=True, exist_ok=True)
+
+    if overall_by_metric:
+        overall_paths, overall_rows = _attach_overall_fits_to_segment(
+            breakdown,
+            overall_by_metric=overall_by_metric,
+            root_tables_dir=tables_dir,
+            root_plots_dir=plots_dir,
+            segment_tables=segment_tables,
+            segment_plots=segment_plots,
+        )
+        paths.extend(overall_paths)
+        rows.extend(overall_rows)
 
     for metric_id in breakdown["packet_metrics"]:
         metric = _METRICS_BY_ID[metric_id]
@@ -343,6 +447,7 @@ def fit_all(
 
     all_rows: list[dict[str, Any]] = []
     paths: list[Path] = []
+    overall_by_metric: dict[str, dict[str, Any]] = {}
 
     for metric in _METRIC_SPECS:
         suffix = title_suffix(packets) if metric["source"] == "packets" else f"(flows={len(flows):,})"
@@ -359,6 +464,7 @@ def fit_all(
         row["segment"] = "all"
         row["segment_label"] = "All traffic"
         row["group"] = "all"
+        overall_by_metric[metric["id"]] = row
         all_rows.append(row)
         paths.extend(metric_paths)
 
@@ -370,6 +476,7 @@ def fit_all(
             flows,
             tables_dir=tables_dir,
             plots_dir=plots_dir,
+            overall_by_metric=overall_by_metric,
         )
         paths.extend(segment_paths)
         segmented_rows.extend(segment_rows)
@@ -410,12 +517,12 @@ def main(argv: list[str] | None = None) -> int:
         for _, row in aggregate.iterrows():
             print(f"  {row['dataset']}: {row['distribution']} (KS p={row['ks_pvalue']:.2e}, AIC={row['aic']:.1f})")
 
-        print("\nSegmented fits:")
+        print("\nSegmented fits (overall + groups per breakdown):")
         segmented = summary[summary["segment"] != "all"]
         for segment_id in segmented["segment"].drop_duplicates():
             print(f"  [{segment_id}]")
             part = segmented[segmented["segment"] == segment_id]
-            for _, row in part.iterrows():
+            for _, row in part.sort_values(["dataset", "group"]).iterrows():
                 print(
                     f"    {row['dataset']} / {row['group']}: "
                     f"{row['distribution']} (KS p={row['ks_pvalue']:.2e}, AIC={row['aic']:.1f})"

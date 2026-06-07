@@ -23,9 +23,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Python deps from monorepo requirements.txt (build context = repo root).
-COPY requirements.txt /tmp/requirements.txt
+# Also kept at /opt/requirements.txt for entrypoint fallback when /repo is not mounted.
+COPY requirements.txt /opt/requirements.txt
 RUN python3 -m pip install --no-cache-dir --upgrade pip \
-    && python3 -m pip install --no-cache-dir -r /tmp/requirements.txt \
+    && python3 -m pip install --no-cache-dir -r /opt/requirements.txt \
         mininet==2.3.0.dev6 \
         psutil \
         "protobuf>=3.19,<4"
@@ -34,4 +35,10 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip \
 RUN bash -ec 'rm -f /usr/local/lib/python3.*/site-packages/google/__init__.py; \
     rm -rf /usr/local/lib/python3.*/site-packages/google/__pycache__'
 
+COPY task2/scripts/docker_entrypoint.sh /usr/local/bin/docker_entrypoint.sh
+RUN chmod +x /usr/local/bin/docker_entrypoint.sh
+
 WORKDIR /p4
+
+ENTRYPOINT ["/usr/local/bin/docker_entrypoint.sh"]
+CMD ["tail", "-f", "/dev/null"]

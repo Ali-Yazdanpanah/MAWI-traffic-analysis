@@ -18,15 +18,27 @@ from analysis.timeseries.protocol_stacked_area import (
 )
 
 
-def _maybe_plot_throughput_acf(packets: pd.DataFrame, *, out_path: Path, title: str) -> Path | None:
+def _maybe_plot_throughput_acf(
+    packets: pd.DataFrame,
+    *,
+    out_path: Path,
+    title: str,
+    output_dir: Path,
+) -> Path | None:
     try:
         from analysis.timeseries.throughput_acf import plot_throughput_acf
     except ImportError as exc:
         print(f"[timeseries] Skipping throughput ACF: {exc}", file=sys.stderr)
         return None
     try:
-        return plot_throughput_acf(packets, out_path=out_path, title=title)
-    except ImportError as exc:
+        path, _hurst = plot_throughput_acf(
+            packets,
+            out_path=out_path,
+            title=title,
+            hurst_json_path=output_dir / "hurst_summary.json",
+        )
+        return path
+    except (ImportError, ValueError) as exc:
         print(f"[timeseries] Skipping throughput ACF: {exc}", file=sys.stderr)
         return None
 
@@ -73,6 +85,7 @@ def plot_all(
             packets,
             out_path=output / "throughput_acf.png",
             title=f"Throughput ACF {title_suffix(packets)}",
+            output_dir=output,
         ),
     ]
     return [path for path in paths if path is not None]

@@ -288,6 +288,12 @@ class ExerciseRunner:
                 bmv2_json_path=bmv2_json_path,
                 proto_dump_file=outfile,
             )
+            p4runtime_pipeline.apply_runtime_pre_entries(
+                grpc_addr='127.0.0.1:%d' % grpc_port,
+                device_id=device_id,
+                runtime_json=runtime_json,
+                workdir=os.getcwd(),
+            )
         except Exception as exc:
             log_path = '/tmp/p4s.%s.log' % sw_name
             self.logger('P4Runtime pipeline push failed: %s' % exc)

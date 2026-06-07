@@ -589,9 +589,30 @@ def _flow_id(row: pd.Series) -> str:
     )
 
 
-def classify_flow_size_class(byte_sum: pd.Series) -> pd.Series:
+def elephant_byte_threshold(
+    byte_sum: pd.Series,
+    *,
+    elephant_percentile: float = 95.0,
+) -> float | None:
+    """Byte-volume threshold separating mice from elephants (default: 95th percentile)."""
+    sizes = pd.to_numeric(byte_sum, errors="coerce")
+    positive = sizes[sizes > 0]
+    if positive.empty:
+        return None
+    return float(np.percentile(positive, elephant_percentile))
+
+
+def classify_flow_size_class(
+    byte_sum: pd.Series,
+    *,
+    elephant_percentile: float = 95.0,
+) -> pd.Series:
     """
-    Split flows into mice vs elephant by median total byte volume.
+    Split flows into mice vs elephant using a heavy-tail percentile threshold.
+
+    Elephants are flows at or above the ``elephant_percentile`` of byte_sum
+    (default top 5% at P95), matching the Pareto / heavy-tail convention in
+    traffic characterization literature.
 
     Flows with non-positive byte_sum are labeled unknown.
     """
@@ -599,7 +620,7 @@ def classify_flow_size_class(byte_sum: pd.Series) -> pd.Series:
     positive = sizes[sizes > 0]
     if positive.empty:
         return pd.Series("unknown", index=byte_sum.index, dtype=object)
-    threshold = float(positive.median())
+    threshold = float(np.percentile(positive, elephant_percentile))
     out = pd.Series("unknown", index=byte_sum.index, dtype=object)
     mask = sizes > 0
     out.loc[mask] = np.where(sizes.loc[mask] >= threshold, "elephant", "mice")

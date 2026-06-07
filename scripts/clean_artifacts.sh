@@ -12,4 +12,4 @@ find "$ROOT/task1" "$ROOT/task2" "$ROOT/notebooks" -type d -name __pycache__ -pr
 
 echo "Done. Regenerate with:"
 echo "  cd task2 && make build"
-echo "  py -3.10 control_plane/plot_analysis.py data/capture.jsonl -n 10000"
+echo "  py -3.10 control_plane/plot_capture_jsonl.py data/capture.jsonl -n 10000"

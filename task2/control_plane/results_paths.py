@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from paths import ensure_task1_on_path, task2_root
+from repo_paths import ensure_task1_on_path, task2_root
 
 ensure_task1_on_path()
 

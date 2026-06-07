@@ -24,7 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 P4_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 COUNT="${PACKET_LIMIT:-10000}"
-MULT="${REPLAY_MULTIPLIER:-0.01}"
+MULT="${REPLAY_MULTIPLIER:-0.001}"
 PCAP="${REPLAY_PCAP:-$P4_ROOT/data/mawi_${COUNT}.pcap}"
 CAPTURE="${CAPTURE_PCAP:-$P4_ROOT/data/capture.pcap}"
 CAPTURE_JSONL="${CAPTURE_JSONL:-$P4_ROOT/data/capture.jsonl}"
@@ -33,7 +33,7 @@ CAPTURE_SOURCE="${CAPTURE_SOURCE:-h2}"
 CAPTURE_TIMEOUT="${CAPTURE_TIMEOUT:-300}"
 CAPTURE_USE_GRPC="${CAPTURE_USE_GRPC:-0}"
 INT_UDP_PORT="${INT_UDP_PORT:-4790}"
-SWITCH_PCAP="${SWITCH_PCAP:-$P4_ROOT/pcaps/s1-eth2.pcap}"
+SWITCH_PCAP="${SWITCH_PCAP:-$P4_ROOT/pcaps/s1-eth2_out.pcap}"
 H_IFACE="${MININET_HOST_IFACE:-eth0}"
 
 MNEXEC="${MNEXEC:-mnexec}"
@@ -55,7 +55,7 @@ host_pid() {
 
 require_mininet() {
     if ! command -v "$MNEXEC" >/dev/null 2>&1; then
-        echo "Missing $MNEXEC -- install/run Mininet (make run) first." >&2
+        echo "Missing $MNEXEC -- install/run Mininet (make run-thrift) first." >&2
         exit 1
     fi
     if ! command -v pgrep >/dev/null 2>&1; then
@@ -64,7 +64,7 @@ require_mininet() {
     fi
     if ! host_pid h1 >/dev/null; then
         echo "Mininet hosts not available. Start the topology in another terminal:" >&2
-        echo "  cd $P4_ROOT && make run   # or make run-grpc" >&2
+        echo "  cd $P4_ROOT && make run-thrift   # or make run-grpc" >&2
         exit 1
     fi
 }
@@ -100,7 +100,7 @@ validate_capture_settings() {
     fi
 
     if [[ "$EFFECTIVE_SOURCE" == "switch" ]]; then
-        EFFECTIVE_PCAP="$SWITCH_PCAP"
+        EFFECTIVE_PCAP="$(resolve_switch_pcap "$SWITCH_PCAP")"
     else
         EFFECTIVE_PCAP="$CAPTURE"
     fi
@@ -112,6 +112,36 @@ require_pcap() {
         echo "Run: PACKET_LIMIT=$COUNT make trace-prepare" >&2
         exit 1
     fi
+}
+
+# BMv2 >= recent versions write per-direction pcaps (s1-eth2_out.pcap for egress
+# toward h2). Older builds used a single s1-eth2.pcap per port.
+resolve_switch_pcap() {
+    local candidate="$1"
+    if [[ -f "$candidate" ]]; then
+        echo "$candidate"
+        return 0
+    fi
+
+    local dir stem legacy out_pcap
+    dir="$(dirname "$candidate")"
+    stem="$(basename "$candidate" .pcap)"
+    stem="${stem%_out}"
+    stem="${stem%_in}"
+    out_pcap="$dir/${stem}_out.pcap"
+    legacy_pcap="$dir/${stem}.pcap"
+
+    if [[ -f "$out_pcap" ]]; then
+        echo "$out_pcap"
+        return 0
+    fi
+    if [[ -f "$legacy_pcap" ]]; then
+        echo "$legacy_pcap"
+        return 0
+    fi
+
+    echo "$candidate"
+    return 1
 }
 
 run_host() {
@@ -126,18 +156,23 @@ run_host() {
 }
 
 configure_switch_export() {
-    local grpc_args=()
     local export_capture_mode="$CAPTURE_MODE"
+    local export_script="set_export_mode_thrift.py"
     if [[ "$CAPTURE_MODE" == "switch" ]]; then
         export_capture_mode="pcap"
     fi
     if [[ "$CAPTURE_USE_GRPC" == "1" ]]; then
-        grpc_args=(--use-grpc)
+        export_script="set_export_mode_grpc.py"
     fi
     echo "Configuring switch telemetry export for CAPTURE_MODE=$CAPTURE_MODE..."
-    if ! python3 "$P4_ROOT/control_plane/set_export_mode.py" \
-        --capture-mode "$export_capture_mode" "${grpc_args[@]}"; then
-        echo "Warning: could not set export mode (run make build after P4 changes?)" >&2
+    if ! python3 "$P4_ROOT/control_plane/$export_script" \
+        --capture-mode "$export_capture_mode"; then
+        echo "ERROR: could not set export mode (run make build after P4 changes?)" >&2
+        if [[ "$CAPTURE_MODE" == "udp" ]]; then
+            echo "UDP INT requires export mode udp + clone session 1 -> port 2." >&2
+            exit 1
+        fi
+        echo "Warning: continuing with previous export mode." >&2
     fi
 }
 
@@ -249,15 +284,23 @@ main() {
             capture_pid=$!
         elif [[ "$EFFECTIVE_MODE" == "live" || "$EFFECTIVE_MODE" == "udp" ]]; then
             echo "Starting collector on h2 (background)..."
-            capture_args=(
-                python3 "$P4_ROOT/control_plane/capture_packets.py"
-                --interface "$H_IFACE"
-                -n "$COUNT"
-                --timeout "$CAPTURE_TIMEOUT"
-                -o "$CAPTURE_JSONL"
-            )
             if [[ "$EFFECTIVE_MODE" == "udp" ]]; then
-                capture_args+=(--int-udp --udp-port "$INT_UDP_PORT")
+                capture_args=(
+                    python3 "$P4_ROOT/control_plane/capture_udp_int.py"
+                    --interface "$H_IFACE"
+                    -n "$COUNT"
+                    --timeout "$CAPTURE_TIMEOUT"
+                    --udp-port "$INT_UDP_PORT"
+                    -o "$CAPTURE_JSONL"
+                )
+            else
+                capture_args=(
+                    python3 "$P4_ROOT/control_plane/capture_inband.py"
+                    --interface "$H_IFACE"
+                    -n "$COUNT"
+                    --timeout "$CAPTURE_TIMEOUT"
+                    -o "$CAPTURE_JSONL"
+                )
             fi
             run_host h2 "${capture_args[@]}" &
             capture_pid=$!
@@ -285,22 +328,33 @@ main() {
             sleep 1
         fi
         if [[ ! -f "$EFFECTIVE_PCAP" ]]; then
-            echo "Missing $EFFECTIVE_PCAP after replay." >&2
-            echo "Ensure Mininet was started with BMv2 --pcap (default via make run)." >&2
-            exit 1
+            resolved_pcap="$(resolve_switch_pcap "$EFFECTIVE_PCAP" || true)"
+            if [[ -f "$resolved_pcap" ]]; then
+                EFFECTIVE_PCAP="$resolved_pcap"
+            else
+                echo "Missing switch pcap after replay (looked for egress toward h2)." >&2
+                echo "Expected: $EFFECTIVE_PCAP (or legacy pcaps/s1-eth2.pcap)" >&2
+                pcap_dir="$(dirname "$EFFECTIVE_PCAP")"
+                if [[ -d "$pcap_dir" ]]; then
+                    echo "BMv2 pcaps present in $pcap_dir:" >&2
+                    ls -la "$pcap_dir"/*eth2* 2>/dev/null >&2 || ls -la "$pcap_dir" >&2 || true
+                fi
+                echo "Ensure Mininet was started with BMv2 --pcap (default via make run-thrift)." >&2
+                exit 1
+            fi
         fi
         captured="$(count_pcap_packets "$EFFECTIVE_PCAP")"
         echo "Packets in $EFFECTIVE_PCAP: $captured"
         rel_pcap="${EFFECTIVE_PCAP#"$P4_ROOT/"}"
         echo "Done. Parse/plot:"
-        echo "  python3 control_plane/run_pipeline.py --pcap $rel_pcap -n $COUNT"
+        echo "  python3 control_plane/pipeline_capture_jsonl.py --pcap $rel_pcap -n $COUNT"
     else
         echo "Stopping collector on h2 (replay finished)..."
         stop_h2_sniff "$capture_pid"
         captured="$(count_jsonl_lines "$CAPTURE_JSONL")"
         echo "Captured telemetry records in $CAPTURE_JSONL: $captured"
         echo "Done. Plot:"
-        echo "  python3 control_plane/run_pipeline.py --capture-jsonl data/capture.jsonl -n $captured"
+        echo "  python3 control_plane/pipeline_capture_jsonl.py --capture-jsonl data/capture.jsonl -n $captured"
     fi
 
     if [[ "$captured" -lt "$COUNT" ]]; then

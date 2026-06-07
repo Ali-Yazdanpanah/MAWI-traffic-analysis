@@ -62,6 +62,23 @@ def save_figure(fig: plt.Figure, path: Path) -> None:
     plt.close(fig)
 
 
+def plot_empty_notice(
+    *,
+    out_path: Path,
+    title: str,
+    message: str = "No plottable values for this selection.",
+) -> Path:
+    """Write a placeholder figure when a chart has no data."""
+    use_plot_style()
+    fig, ax = plt.subplots(figsize=FIGSIZE)
+    ax.axis("off")
+    ax.set_title(title)
+    ax.text(0.5, 0.5, message, ha="center", va="center", fontsize=11, transform=ax.transAxes)
+    save_figure(fig, out_path)
+    plt.style.use("default")
+    return out_path
+
+
 def title_suffix(packets: pd.DataFrame) -> str:
     n = len(packets)
     if n == 0:
@@ -84,6 +101,115 @@ def compute_ccdf(values: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 def _color_for_label(label: str) -> str:
     key = str(label).lower()
     return PROTOCOL_COLORS.get(key, "#4C72B0")
+
+
+def _cap_axis_max(value: float) -> float:
+    """Round a percentile cap up to a readable axis limit."""
+    if not np.isfinite(value) or value <= 0:
+        return 1.0
+    if value <= 1_000:
+        return float(np.ceil(value / 100.0) * 100.0)
+    if value <= 10_000:
+        return float(np.ceil(value / 1_000.0) * 1_000.0)
+    return float(np.ceil(value / 5_000.0) * 5_000.0)
+
+
+def _format_byte_cap(value: float) -> str:
+    if value >= 1_000_000:
+        return f"{value / 1_000_000:.1f}M"
+    if value >= 1_000:
+        return f"{int(value / 1_000)}k"
+    return f"{int(value)}"
+
+
+def plot_pdf_with_overflow_bin(
+    values: np.ndarray,
+    *,
+    out_path: Path,
+    xlabel: str,
+    title: str,
+    percentile_cap: float = 99.0,
+    x_max: float | None = None,
+    n_bins: int = 50,
+    color: str = "#4C72B0",
+    overflow_color: str = "#E64B35",
+    log_y: bool = False,
+) -> Path:
+    """
+    Linear-scale PDF with a shortened x-axis and one overflow bin for values above the cap.
+    """
+    data = np.asarray(values, dtype=float)
+    data = data[np.isfinite(data)]
+    data = data[data > 0]
+    if len(data) == 0:
+        raise ValueError("No positive values to plot")
+
+    if x_max is None:
+        x_max = _cap_axis_max(float(np.percentile(data, percentile_cap)))
+    else:
+        x_max = float(x_max)
+
+    if x_max <= 0:
+        x_max = float(np.max(data))
+
+    bin_edges = np.linspace(0.0, x_max, n_bins + 1)
+    bin_width = x_max / n_bins
+    in_range = data[data <= x_max]
+    n_overflow = int(np.sum(data > x_max))
+    n_total = len(data)
+
+    counts, _ = np.histogram(in_range, bins=bin_edges)
+    densities = counts / (n_total * bin_width)
+    centers = (bin_edges[:-1] + bin_edges[1:]) / 2.0
+
+    use_plot_style()
+    fig, ax = plt.subplots(figsize=FIGSIZE)
+    ax.bar(
+        centers,
+        densities,
+        width=bin_width * 0.95,
+        align="center",
+        color=color,
+        alpha=0.75,
+        edgecolor="white",
+        linewidth=0.4,
+        label=f"≤ {_format_byte_cap(x_max)} B",
+    )
+
+    overflow_center = x_max + bin_width / 2.0
+    overflow_density = n_overflow / (n_total * bin_width) if n_overflow else 0.0
+    if n_overflow:
+        ax.bar(
+            [overflow_center],
+            [overflow_density],
+            width=bin_width * 0.95,
+            align="center",
+            color=overflow_color,
+            alpha=0.85,
+            edgecolor="white",
+            linewidth=0.4,
+            label=f"> {_format_byte_cap(x_max)} B (n={n_overflow:,})",
+        )
+
+    ax.set_xlim(0.0, x_max + bin_width)
+    if log_y:
+        ax.set_yscale("log")
+        ymin, ymax = ax.get_ylim()
+        if ymin <= 0:
+            ax.set_ylim(bottom=max(ymax * 1e-6, 1e-12), top=ymax)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("Density")
+    cap_note = f"cap={_format_byte_cap(x_max)} B"
+    if n_overflow:
+        ax.set_title(f"{title}\n[{cap_note}, {n_overflow:,} flows in overflow bin]")
+    else:
+        ax.set_title(f"{title}\n[{cap_note}]")
+    if n_overflow:
+        ax.legend(loc="upper right", fontsize=8)
+    ax.grid(True, alpha=0.3, which="both" if log_y else "major")
+    save_figure(fig, out_path)
+    plt.style.use("default")
+    return out_path
 
 
 def plot_pdf(
@@ -127,12 +253,17 @@ def plot_pdf(
 
 def log_bins(values_list: list[np.ndarray], *, n_bins: int = 50) -> np.ndarray:
     """Shared log-spaced bin edges for positive values."""
-    parts = [v for v in values_list if len(v) > 0]
+    parts = [np.asarray(v, dtype=float) for v in values_list if len(v) > 0]
     if not parts:
-        return np.logspace(0, 3, n_bins + 1)
+        return np.logspace(-6, 3, n_bins + 1)
     combined = np.concatenate(parts)
-    lo = max(float(np.min(combined)), 1.0)
-    hi = max(float(np.max(combined)), lo * 10)
+    positive = combined[np.isfinite(combined) & (combined > 0)]
+    if len(positive) == 0:
+        return np.logspace(-6, 3, n_bins + 1)
+    lo = max(float(np.min(positive)), 1e-12)
+    hi = max(float(np.max(positive)), lo * 10)
+    if hi <= lo:
+        hi = lo * 10
     return np.logspace(np.log10(lo), np.log10(hi), n_bins + 1)
 
 
@@ -238,10 +369,12 @@ def plot_ccdf(
     xlabel: str,
     title: str,
     log_x: bool = True,
+    color: str = "#2563eb",
 ) -> Path:
     x, y = compute_ccdf(values)
+    use_plot_style()
     fig, ax = plt.subplots(figsize=FIGSIZE)
-    ax.step(x, y, where="post", color="#2563eb", linewidth=1.5)
+    ax.step(x, y, where="post", color=color, linewidth=1.5)
     if log_x:
         ax.set_xscale("log")
     ax.set_yscale("log")
@@ -251,4 +384,5 @@ def plot_ccdf(
     ax.grid(True, alpha=0.3, which="both")
     ax.set_ylim(bottom=max(1e-6, y.min() * 0.5) if len(y) else 1e-6, top=1.05)
     save_figure(fig, out_path)
+    plt.style.use("default")
     return out_path

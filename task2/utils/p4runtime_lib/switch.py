@@ -10,6 +10,7 @@ import grpc
 from p4.v1 import p4runtime_pb2, p4runtime_pb2_grpc
 
 from . import p4_device_config_pb2 as p4config_pb2
+from .error_utils import grpc_error_is_already_exists
 
 MSG_LOG_MAX_LEN = 1024
 
@@ -109,20 +110,35 @@ class SwitchConnection(object):
         else:
             self.client_stub.SetForwardingPipelineConfig(request)
 
-    def WriteTableEntry(self, table_entry, dry_run=False):
+    def _write_table_entry(self, table_entry, update_type, dry_run=False):
         request = p4runtime_pb2.WriteRequest()
         request.device_id = self.device_id
         request.election_id.low = 1
         update = request.updates.add()
-        if table_entry.is_default_action:
-            update.type = p4runtime_pb2.Update.MODIFY
-        else:
-            update.type = p4runtime_pb2.Update.INSERT
+        update.type = update_type
         update.entity.table_entry.CopyFrom(table_entry)
         if dry_run:
             print("P4Runtime Write:", request)
         else:
             self.client_stub.Write(request)
+
+    def WriteTableEntry(self, table_entry, dry_run=False):
+        if table_entry.is_default_action:
+            self._write_table_entry(table_entry, p4runtime_pb2.Update.MODIFY, dry_run=dry_run)
+        else:
+            self._write_table_entry(table_entry, p4runtime_pb2.Update.INSERT, dry_run=dry_run)
+
+    def ModifyTableEntry(self, table_entry, dry_run=False):
+        self._write_table_entry(table_entry, p4runtime_pb2.Update.MODIFY, dry_run=dry_run)
+
+    def UpsertTableEntry(self, table_entry, dry_run=False):
+        try:
+            self.WriteTableEntry(table_entry, dry_run=dry_run)
+        except grpc.RpcError as exc:
+            if exc.code() == grpc.StatusCode.ALREADY_EXISTS:
+                self.ModifyTableEntry(table_entry, dry_run=dry_run)
+            else:
+                raise
 
     def DeleteTableEntry(self, table_entry, dry_run=False):
         request = p4runtime_pb2.WriteRequest()
@@ -139,6 +155,7 @@ class SwitchConnection(object):
     def ReadTableEntries(self, table_id=None, dry_run=False):
         request = p4runtime_pb2.ReadRequest()
         request.device_id = self.device_id
+        request.election_id.low = 1
         entity = request.entities.add()
         table_entry = entity.table_entry
         if table_id is not None:
@@ -154,6 +171,7 @@ class SwitchConnection(object):
     def ReadCounters(self, counter_id=None, index=None, dry_run=False):
         request = p4runtime_pb2.ReadRequest()
         request.device_id = self.device_id
+        request.election_id.low = 1
         entity = request.entities.add()
         counter_entry = entity.counter_entry
         if counter_id is not None:
@@ -168,17 +186,31 @@ class SwitchConnection(object):
             for response in self.client_stub.Read(request):
                 yield response
 
-    def WritePREEntry(self, pre_entry, dry_run=False):
+    def _write_pre_entry(self, pre_entry, update_type, dry_run=False):
         request = p4runtime_pb2.WriteRequest()
         request.device_id = self.device_id
         request.election_id.low = 1
         update = request.updates.add()
-        update.type = p4runtime_pb2.Update.INSERT
+        update.type = update_type
         update.entity.packet_replication_engine_entry.CopyFrom(pre_entry)
         if dry_run:
             print("P4Runtime Write:", request)
         else:
             self.client_stub.Write(request)
+
+    def WritePREEntry(self, pre_entry, dry_run=False):
+        self._write_pre_entry(pre_entry, p4runtime_pb2.Update.INSERT, dry_run=dry_run)
+
+    def ModifyPREEntry(self, pre_entry, dry_run=False):
+        self._write_pre_entry(pre_entry, p4runtime_pb2.Update.MODIFY, dry_run=dry_run)
+
+    def UpsertPREEntry(self, pre_entry, dry_run=False):
+        try:
+            self.WritePREEntry(pre_entry, dry_run=dry_run)
+        except grpc.RpcError as exc:
+            if grpc_error_is_already_exists(exc):
+                return
+            raise
 
     def PacketIn(self, dry_run=False):
         request = self.dispatcher.packet_in_queue.get()

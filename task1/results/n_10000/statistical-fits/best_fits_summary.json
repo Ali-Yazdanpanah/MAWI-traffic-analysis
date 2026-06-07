@@ -1,0 +1,1062 @@
+[
+  {
+    "dataset": "iat",
+    "distribution": "poisson",
+    "n": 9999,
+    "params": {
+      "lambda": 34361.178981226614,
+      "mean_iat": 2.9102610261026097e-05,
+      "scale": 2.9102610261026097e-05
+    },
+    "ks_statistic": 0.5978181890342589,
+    "ks_pvalue": 0.0,
+    "aic": -188872.76439698346,
+    "bic": -188865.55415661648,
+    "log_likelihood": 94437.38219849173,
+    "label": "Inter-arrival time",
+    "caption": "best=poisson (lambda=3.436e+04, mean_iat=2.91e-05, scale=2.91e-05); KS D=0.5978, p=0.00e+00; AIC=-188872.8, BIC=-188865.6",
+    "segment": "all",
+    "segment_label": "All traffic",
+    "group": "all"
+  },
+  {
+    "dataset": "frame_len",
+    "distribution": "gamma",
+    "n": 10000,
+    "params": {
+      "shape": 0.718483859501341,
+      "loc": 0.0,
+      "scale": 1027.7814737724414
+    },
+    "ks_statistic": 0.2513844678727532,
+    "ks_pvalue": 0.0,
+    "aic": 151272.48744184696,
+    "bic": 151286.90812259092,
+    "log_likelihood": -75634.24372092348,
+    "label": "Packet size",
+    "caption": "best=gamma (shape=0.7185, loc=0, scale=1028); KS D=0.2514, p=0.00e+00; AIC=151272.5, BIC=151286.9",
+    "segment": "all",
+    "segment_label": "All traffic",
+    "group": "all"
+  },
+  {
+    "dataset": "flow_duration",
+    "distribution": "gamma",
+    "n": 692,
+    "params": {
+      "shape": 0.4586953057787982,
+      "loc": 0.0,
+      "scale": 0.2058372502590913
+    },
+    "ks_statistic": 0.16861808799635924,
+    "ks_pvalue": 1.1435032503190098e-17,
+    "aic": -2273.6820199588346,
+    "bic": -2264.6028480475993,
+    "log_likelihood": 1138.8410099794173,
+    "label": "Flow duration",
+    "caption": "best=gamma (shape=0.4587, loc=0, scale=0.2058); KS D=0.1686, p=1.14e-17; AIC=-2273.7, BIC=-2264.6",
+    "segment": "all",
+    "segment_label": "All traffic",
+    "group": "all"
+  },
+  {
+    "dataset": "flow_byte_sum",
+    "distribution": "pareto",
+    "n": 1834,
+    "params": {
+      "shape": 0.7232074044773247,
+      "loc": 0.0,
+      "scale": 60.0
+    },
+    "ks_statistic": 0.2638507082183811,
+    "ks_pvalue": 3.586329513652801e-113,
+    "aic": 24950.55584200801,
+    "bic": 24961.584351313642,
+    "log_likelihood": -12473.277921004004,
+    "label": "Flow size",
+    "caption": "best=pareto (shape=0.7232, loc=0, scale=60); KS D=0.2639, p=3.59e-113; AIC=24950.6, BIC=24961.6",
+    "segment": "all",
+    "segment_label": "All traffic",
+    "group": "all"
+  },
+  {
+    "dataset": "flow_throughput",
+    "distribution": "lognormal",
+    "n": 692,
+    "params": {
+      "shape": 2.9019302813743315,
+      "loc": 0.0,
+      "scale": 401088.8440885725
+    },
+    "ks_statistic": 0.11112963667319115,
+    "ks_pvalue": 6.723803739177866e-08,
+    "aic": 21298.574015150793,
+    "bic": 21307.653187062027,
+    "log_likelihood": -10647.287007575396,
+    "label": "Flow throughput",
+    "caption": "best=lognormal (shape=2.902, loc=0, scale=4.011e+05); KS D=0.1111, p=6.72e-08; AIC=21298.6, BIC=21307.7",
+    "segment": "all",
+    "segment_label": "All traffic",
+    "group": "all"
+  },
+  {
+    "dataset": "iat__all",
+    "distribution": "poisson",
+    "n": 9999,
+    "params": {
+      "lambda": 34361.178981226614,
+      "mean_iat": 2.9102610261026097e-05,
+      "scale": 2.9102610261026097e-05
+    },
+    "ks_statistic": 0.5978181890342589,
+    "ks_pvalue": 0.0,
+    "aic": -188872.76439698346,
+    "bic": -188865.55415661648,
+    "log_likelihood": 94437.38219849173,
+    "label": "Inter-arrival time",
+    "caption": "best=poisson (lambda=3.436e+04, mean_iat=2.91e-05, scale=2.91e-05); KS D=0.5978, p=0.00e+00; AIC=-188872.8, BIC=-188865.6",
+    "segment": "transport_proto",
+    "segment_label": "Transport protocol",
+    "group": "all"
+  },
+  {
+    "dataset": "frame_len__all",
+    "distribution": "gamma",
+    "n": 10000,
+    "params": {
+      "shape": 0.718483859501341,
+      "loc": 0.0,
+      "scale": 1027.7814737724414
+    },
+    "ks_statistic": 0.2513844678727532,
+    "ks_pvalue": 0.0,
+    "aic": 151272.48744184696,
+    "bic": 151286.90812259092,
+    "log_likelihood": -75634.24372092348,
+    "label": "Packet size",
+    "caption": "best=gamma (shape=0.7185, loc=0, scale=1028); KS D=0.2514, p=0.00e+00; AIC=151272.5, BIC=151286.9",
+    "segment": "transport_proto",
+    "segment_label": "Transport protocol",
+    "group": "all"
+  },
+  {
+    "dataset": "flow_duration__all",
+    "distribution": "gamma",
+    "n": 692,
+    "params": {
+      "shape": 0.4586953057787982,
+      "loc": 0.0,
+      "scale": 0.2058372502590913
+    },
+    "ks_statistic": 0.16861808799635924,
+    "ks_pvalue": 1.1435032503190098e-17,
+    "aic": -2273.6820199588346,
+    "bic": -2264.6028480475993,
+    "log_likelihood": 1138.8410099794173,
+    "label": "Flow duration",
+    "caption": "best=gamma (shape=0.4587, loc=0, scale=0.2058); KS D=0.1686, p=1.14e-17; AIC=-2273.7, BIC=-2264.6",
+    "segment": "transport_proto",
+    "segment_label": "Transport protocol",
+    "group": "all"
+  },
+  {
+    "dataset": "flow_byte_sum__all",
+    "distribution": "pareto",
+    "n": 1834,
+    "params": {
+      "shape": 0.7232074044773247,
+      "loc": 0.0,
+      "scale": 60.0
+    },
+    "ks_statistic": 0.2638507082183811,
+    "ks_pvalue": 3.586329513652801e-113,
+    "aic": 24950.55584200801,
+    "bic": 24961.584351313642,
+    "log_likelihood": -12473.277921004004,
+    "label": "Flow size",
+    "caption": "best=pareto (shape=0.7232, loc=0, scale=60); KS D=0.2639, p=3.59e-113; AIC=24950.6, BIC=24961.6",
+    "segment": "transport_proto",
+    "segment_label": "Transport protocol",
+    "group": "all"
+  },
+  {
+    "dataset": "flow_throughput__all",
+    "distribution": "lognormal",
+    "n": 692,
+    "params": {
+      "shape": 2.9019302813743315,
+      "loc": 0.0,
+      "scale": 401088.8440885725
+    },
+    "ks_statistic": 0.11112963667319115,
+    "ks_pvalue": 6.723803739177866e-08,
+    "aic": 21298.574015150793,
+    "bic": 21307.653187062027,
+    "log_likelihood": -10647.287007575396,
+    "label": "Flow throughput",
+    "caption": "best=lognormal (shape=2.902, loc=0, scale=4.011e+05); KS D=0.1111, p=6.72e-08; AIC=21298.6, BIC=21307.7",
+    "segment": "transport_proto",
+    "segment_label": "Transport protocol",
+    "group": "all"
+  },
+  {
+    "dataset": "iat__tcp",
+    "distribution": "poisson",
+    "n": 8327,
+    "params": {
+      "lambda": 35706.781587015714,
+      "mean_iat": 2.800588447219887e-05,
+      "scale": 2.800588447219887e-05
+    },
+    "ks_statistic": 0.5976341577884483,
+    "ks_pvalue": 0.0,
+    "aic": -157929.4792876072,
+    "bic": -157922.45202908095,
+    "log_likelihood": 78965.7396438036,
+    "label": "Inter-arrival time",
+    "caption": "best=poisson (lambda=3.571e+04, mean_iat=2.801e-05, scale=2.801e-05); KS D=0.5976, p=0.00e+00; AIC=-157929.5, BIC=-157922.5",
+    "segment": "transport_proto",
+    "segment_label": "Transport protocol",
+    "group": "tcp"
+  },
+  {
+    "dataset": "iat__udp",
+    "distribution": "poisson",
+    "n": 960,
+    "params": {
+      "lambda": 25757.291191543023,
+      "mean_iat": 3.8823958333333335e-05,
+      "scale": 3.8823958333333335e-05
+    },
+    "ks_statistic": 0.5864533519084136,
+    "ks_pvalue": 1.3187806995e-314,
+    "aic": -17578.428196635996,
+    "bic": -17573.561263351534,
+    "log_likelihood": 8790.214098317998,
+    "label": "Inter-arrival time",
+    "caption": "best=poisson (lambda=2.576e+04, mean_iat=3.882e-05, scale=3.882e-05); KS D=0.5865, p=1.32e-314; AIC=-17578.4, BIC=-17573.6",
+    "segment": "transport_proto",
+    "segment_label": "Transport protocol",
+    "group": "udp"
+  },
+  {
+    "dataset": "frame_len__tcp",
+    "distribution": "gamma",
+    "n": 8328,
+    "params": {
+      "shape": 0.7283138243441611,
+      "loc": 0.0,
+      "scale": 1105.0893148882187
+    },
+    "ks_statistic": 0.30172714476536,
+    "ks_pvalue": 0.0,
+    "aic": 127473.9239587383,
+    "bic": 127487.97871595889,
+    "log_likelihood": -63734.96197936915,
+    "label": "Packet size",
+    "caption": "best=gamma (shape=0.7283, loc=0, scale=1105); KS D=0.3017, p=0.00e+00; AIC=127473.9, BIC=127488.0",
+    "segment": "transport_proto",
+    "segment_label": "Transport protocol",
+    "group": "tcp"
+  },
+  {
+    "dataset": "frame_len__udp",
+    "distribution": "lognormal",
+    "n": 960,
+    "params": {
+      "shape": 1.152013991630519,
+      "loc": 0.0,
+      "scale": 283.45287492380885
+    },
+    "ks_statistic": 0.18378042942750328,
+    "ks_pvalue": 7.503952106853627e-29,
+    "aic": 13842.392558559306,
+    "bic": 13852.12642512823,
+    "log_likelihood": -6919.196279279653,
+    "label": "Packet size",
+    "caption": "best=lognormal (shape=1.152, loc=0, scale=283.5); KS D=0.1838, p=7.50e-29; AIC=13842.4, BIC=13852.1",
+    "segment": "transport_proto",
+    "segment_label": "Transport protocol",
+    "group": "udp"
+  },
+  {
+    "dataset": "flow_duration__tcp",
+    "distribution": "gamma",
+    "n": 555,
+    "params": {
+      "shape": 0.5081511842254013,
+      "loc": 0.0,
+      "scale": 0.19200177240503163
+    },
+    "ks_statistic": 0.1706627216540128,
+    "ks_pvalue": 1.3304772794364324e-14,
+    "aic": -1696.3129644931496,
+    "bic": -1687.6750282656567,
+    "log_likelihood": 850.1564822465748,
+    "label": "Flow duration",
+    "caption": "best=gamma (shape=0.5082, loc=0, scale=0.192); KS D=0.1707, p=1.33e-14; AIC=-1696.3, BIC=-1687.7",
+    "segment": "transport_proto",
+    "segment_label": "Transport protocol",
+    "group": "tcp"
+  },
+  {
+    "dataset": "flow_duration__udp",
+    "distribution": "gamma",
+    "n": 119,
+    "params": {
+      "shape": 0.3269526886619744,
+      "loc": 0.0,
+      "scale": 0.2542916691592379
+    },
+    "ks_statistic": 0.18568029526422658,
+    "ks_pvalue": 0.0004592775034565839,
+    "aic": -516.9438333205694,
+    "bic": -511.3855863343463,
+    "log_likelihood": 260.4719166602847,
+    "label": "Flow duration",
+    "caption": "best=gamma (shape=0.327, loc=0, scale=0.2543); KS D=0.1857, p=4.59e-04; AIC=-516.9, BIC=-511.4",
+    "segment": "transport_proto",
+    "segment_label": "Transport protocol",
+    "group": "udp"
+  },
+  {
+    "dataset": "flow_byte_sum__tcp",
+    "distribution": "pareto",
+    "n": 947,
+    "params": {
+      "shape": 0.5100631785508867,
+      "loc": 0.0,
+      "scale": 60.0
+    },
+    "ks_statistic": 0.18836741283887332,
+    "ks_pvalue": 6.795127320165867e-30,
+    "aic": 14641.034064147574,
+    "bic": 14650.740662333947,
+    "log_likelihood": -7318.517032073787,
+    "label": "Flow size",
+    "caption": "best=pareto (shape=0.5101, loc=0, scale=60); KS D=0.1884, p=6.80e-30; AIC=14641.0, BIC=14650.7",
+    "segment": "transport_proto",
+    "segment_label": "Transport protocol",
+    "group": "tcp"
+  },
+  {
+    "dataset": "flow_byte_sum__udp",
+    "distribution": "pareto",
+    "n": 302,
+    "params": {
+      "shape": 0.6344875782010946,
+      "loc": 0.0,
+      "scale": 60.0
+    },
+    "ks_statistic": 0.05838347237244568,
+    "ks_pvalue": 0.24500460208133423,
+    "aic": 4307.7156981112275,
+    "bic": 4315.1365521459775,
+    "log_likelihood": -2151.8578490556138,
+    "label": "Flow size",
+    "caption": "best=pareto (shape=0.6345, loc=0, scale=60); KS D=0.0584, p=2.45e-01; AIC=4307.7, BIC=4315.1",
+    "segment": "transport_proto",
+    "segment_label": "Transport protocol",
+    "group": "udp"
+  },
+  {
+    "dataset": "flow_throughput__tcp",
+    "distribution": "lognormal",
+    "n": 555,
+    "params": {
+      "shape": 2.6687424916075306,
+      "loc": 0.0,
+      "scale": 354381.8363632503
+    },
+    "ks_statistic": 0.12099776440787724,
+    "ks_pvalue": 1.5412345929811262e-07,
+    "aic": 16852.33054020771,
+    "bic": 16860.968476435202,
+    "log_likelihood": -8424.165270103855,
+    "label": "Flow throughput",
+    "caption": "best=lognormal (shape=2.669, loc=0, scale=3.544e+05); KS D=0.1210, p=1.54e-07; AIC=16852.3, BIC=16861.0",
+    "segment": "transport_proto",
+    "segment_label": "Transport protocol",
+    "group": "tcp"
+  },
+  {
+    "dataset": "flow_throughput__udp",
+    "distribution": "pareto",
+    "n": 119,
+    "params": {
+      "shape": 0.20945223301914095,
+      "loc": 0.0,
+      "scale": 5592.146048366179
+    },
+    "ks_statistic": 0.13603008104664008,
+    "ks_pvalue": 0.022104878225967517,
+    "aic": 3804.0832244113653,
+    "bic": 3809.6414713975882,
+    "log_likelihood": -1900.0416122056827,
+    "label": "Flow throughput",
+    "caption": "best=pareto (shape=0.2095, loc=0, scale=5592); KS D=0.1360, p=2.21e-02; AIC=3804.1, BIC=3809.6",
+    "segment": "transport_proto",
+    "segment_label": "Transport protocol",
+    "group": "udp"
+  },
+  {
+    "dataset": "iat__all",
+    "distribution": "poisson",
+    "n": 9999,
+    "params": {
+      "lambda": 34361.178981226614,
+      "mean_iat": 2.9102610261026097e-05,
+      "scale": 2.9102610261026097e-05
+    },
+    "ks_statistic": 0.5978181890342589,
+    "ks_pvalue": 0.0,
+    "aic": -188872.76439698346,
+    "bic": -188865.55415661648,
+    "log_likelihood": 94437.38219849173,
+    "label": "Inter-arrival time",
+    "caption": "best=poisson (lambda=3.436e+04, mean_iat=2.91e-05, scale=2.91e-05); KS D=0.5978, p=0.00e+00; AIC=-188872.8, BIC=-188865.6",
+    "segment": "packet_role",
+    "segment_label": "Control vs data",
+    "group": "all"
+  },
+  {
+    "dataset": "frame_len__all",
+    "distribution": "gamma",
+    "n": 10000,
+    "params": {
+      "shape": 0.718483859501341,
+      "loc": 0.0,
+      "scale": 1027.7814737724414
+    },
+    "ks_statistic": 0.2513844678727532,
+    "ks_pvalue": 0.0,
+    "aic": 151272.48744184696,
+    "bic": 151286.90812259092,
+    "log_likelihood": -75634.24372092348,
+    "label": "Packet size",
+    "caption": "best=gamma (shape=0.7185, loc=0, scale=1028); KS D=0.2514, p=0.00e+00; AIC=151272.5, BIC=151286.9",
+    "segment": "packet_role",
+    "segment_label": "Control vs data",
+    "group": "all"
+  },
+  {
+    "dataset": "iat__control",
+    "distribution": "poisson",
+    "n": 4136,
+    "params": {
+      "lambda": 31971.800500912155,
+      "mean_iat": 3.1277562862669246e-05,
+      "scale": 3.1277562862669246e-05
+    },
+    "ks_statistic": 0.6177378353913556,
+    "ks_pvalue": 0.0,
+    "aic": -77528.22627138722,
+    "bic": -77521.89878697103,
+    "log_likelihood": 38765.11313569361,
+    "label": "Inter-arrival time",
+    "caption": "best=poisson (lambda=3.197e+04, mean_iat=3.128e-05, scale=3.128e-05); KS D=0.6177, p=0.00e+00; AIC=-77528.2, BIC=-77521.9",
+    "segment": "packet_role",
+    "segment_label": "Control vs data",
+    "group": "control"
+  },
+  {
+    "dataset": "iat__data",
+    "distribution": "poisson",
+    "n": 5745,
+    "params": {
+      "lambda": 36078.52495666809,
+      "mean_iat": 2.771731940818103e-05,
+      "scale": 2.771731940818103e-05
+    },
+    "ks_statistic": 0.5832452000599384,
+    "ks_pvalue": 0.0,
+    "aic": -109077.77601289129,
+    "bic": -109071.11992770102,
+    "log_likelihood": 54539.888006445646,
+    "label": "Inter-arrival time",
+    "caption": "best=poisson (lambda=3.608e+04, mean_iat=2.772e-05, scale=2.772e-05); KS D=0.5832, p=0.00e+00; AIC=-109077.8, BIC=-109071.1",
+    "segment": "packet_role",
+    "segment_label": "Control vs data",
+    "group": "data"
+  },
+  {
+    "dataset": "frame_len__control",
+    "distribution": "lognormal",
+    "n": 4136,
+    "params": {
+      "shape": 0.25501597736170406,
+      "loc": 0.0,
+      "scale": 67.28319096780746
+    },
+    "ks_statistic": 0.340297757131293,
+    "ks_pvalue": 0.0,
+    "aic": 35254.46538348759,
+    "bic": 35267.12035231997,
+    "log_likelihood": -17625.232691743797,
+    "label": "Packet size",
+    "caption": "best=lognormal (shape=0.255, loc=0, scale=67.28); KS D=0.3403, p=0.00e+00; AIC=35254.5, BIC=35267.1",
+    "segment": "packet_role",
+    "segment_label": "Control vs data",
+    "group": "control"
+  },
+  {
+    "dataset": "frame_len__data",
+    "distribution": "weibull",
+    "n": 5746,
+    "params": {
+      "shape": 2.4133969542012355,
+      "loc": 0.0,
+      "scale": 1329.4651521585786
+    },
+    "ks_statistic": 0.3620746084334855,
+    "ks_pvalue": 0.0,
+    "aic": 89344.26994947306,
+    "bic": 89357.58246795215,
+    "log_likelihood": -44670.13497473653,
+    "label": "Packet size",
+    "caption": "best=weibull (shape=2.413, loc=0, scale=1329); KS D=0.3621, p=0.00e+00; AIC=89344.3, BIC=89357.6",
+    "segment": "packet_role",
+    "segment_label": "Control vs data",
+    "group": "data"
+  },
+  {
+    "dataset": "flow_duration__all",
+    "distribution": "gamma",
+    "n": 692,
+    "params": {
+      "shape": 0.4586953057787982,
+      "loc": 0.0,
+      "scale": 0.2058372502590913
+    },
+    "ks_statistic": 0.16861808799635924,
+    "ks_pvalue": 1.1435032503190098e-17,
+    "aic": -2273.6820199588346,
+    "bic": -2264.6028480475993,
+    "log_likelihood": 1138.8410099794173,
+    "label": "Flow duration",
+    "caption": "best=gamma (shape=0.4587, loc=0, scale=0.2058); KS D=0.1686, p=1.14e-17; AIC=-2273.7, BIC=-2264.6",
+    "segment": "flow_size_class",
+    "segment_label": "Mice vs elephant flows",
+    "group": "all"
+  },
+  {
+    "dataset": "flow_byte_sum__all",
+    "distribution": "pareto",
+    "n": 1834,
+    "params": {
+      "shape": 0.7232074044773247,
+      "loc": 0.0,
+      "scale": 60.0
+    },
+    "ks_statistic": 0.2638507082183811,
+    "ks_pvalue": 3.586329513652801e-113,
+    "aic": 24950.55584200801,
+    "bic": 24961.584351313642,
+    "log_likelihood": -12473.277921004004,
+    "label": "Flow size",
+    "caption": "best=pareto (shape=0.7232, loc=0, scale=60); KS D=0.2639, p=3.59e-113; AIC=24950.6, BIC=24961.6",
+    "segment": "flow_size_class",
+    "segment_label": "Mice vs elephant flows",
+    "group": "all"
+  },
+  {
+    "dataset": "flow_throughput__all",
+    "distribution": "lognormal",
+    "n": 692,
+    "params": {
+      "shape": 2.9019302813743315,
+      "loc": 0.0,
+      "scale": 401088.8440885725
+    },
+    "ks_statistic": 0.11112963667319115,
+    "ks_pvalue": 6.723803739177866e-08,
+    "aic": 21298.574015150793,
+    "bic": 21307.653187062027,
+    "log_likelihood": -10647.287007575396,
+    "label": "Flow throughput",
+    "caption": "best=lognormal (shape=2.902, loc=0, scale=4.011e+05); KS D=0.1111, p=6.72e-08; AIC=21298.6, BIC=21307.7",
+    "segment": "flow_size_class",
+    "segment_label": "Mice vs elephant flows",
+    "group": "all"
+  },
+  {
+    "dataset": "flow_duration__mice",
+    "distribution": "gamma",
+    "n": 600,
+    "params": {
+      "shape": 0.4315960334007963,
+      "loc": 0.0,
+      "scale": 0.1981992019989498
+    },
+    "ks_statistic": 0.16684653169016783,
+    "ks_pvalue": 4.559485871815954e-15,
+    "aic": -2157.680507969902,
+    "bic": -2148.8866486594698,
+    "log_likelihood": 1080.840253984951,
+    "label": "Flow duration",
+    "caption": "best=gamma (shape=0.4316, loc=0, scale=0.1982); KS D=0.1668, p=4.56e-15; AIC=-2157.7, BIC=-2148.9",
+    "segment": "flow_size_class",
+    "segment_label": "Mice vs elephant flows",
+    "group": "mice"
+  },
+  {
+    "dataset": "flow_duration__elephant",
+    "distribution": "weibull",
+    "n": 92,
+    "params": {
+      "shape": 1.1547223046138986,
+      "loc": 0.0,
+      "scale": 0.15814523069259853
+    },
+    "ks_statistic": 0.20311320370684377,
+    "ks_pvalue": 0.0008357657815548647,
+    "aic": -160.54318738958915,
+    "bic": -155.49961023549108,
+    "log_likelihood": 82.27159369479457,
+    "label": "Flow duration",
+    "caption": "best=weibull (shape=1.155, loc=0, scale=0.1581); KS D=0.2031, p=8.36e-04; AIC=-160.5, BIC=-155.5",
+    "segment": "flow_size_class",
+    "segment_label": "Mice vs elephant flows",
+    "group": "elephant"
+  },
+  {
+    "dataset": "flow_byte_sum__mice",
+    "distribution": "pareto",
+    "n": 1742,
+    "params": {
+      "shape": 0.8892520257506087,
+      "loc": 0.0,
+      "scale": 60.0
+    },
+    "ks_statistic": 0.269804822043628,
+    "ks_pvalue": 1.7252353602975947e-112,
+    "aic": 22079.528951318385,
+    "bic": 22090.45452963321,
+    "log_likelihood": -11037.764475659193,
+    "label": "Flow size",
+    "caption": "best=pareto (shape=0.8893, loc=0, scale=60); KS D=0.2698, p=1.73e-112; AIC=22079.5, BIC=22090.5",
+    "segment": "flow_size_class",
+    "segment_label": "Mice vs elephant flows",
+    "group": "mice"
+  },
+  {
+    "dataset": "flow_byte_sum__elephant",
+    "distribution": "pareto",
+    "n": 92,
+    "params": {
+      "shape": 0.9732953937953933,
+      "loc": 0.0,
+      "scale": 11366.0
+    },
+    "ks_statistic": 0.0963611065554244,
+    "ks_pvalue": 0.33829108113549966,
+    "aic": 2100.291149618928,
+    "bic": 2105.334726773026,
+    "log_likelihood": -1048.145574809464,
+    "label": "Flow size",
+    "caption": "best=pareto (shape=0.9733, loc=0, scale=1.137e+04); KS D=0.0964, p=3.38e-01; AIC=2100.3, BIC=2105.3",
+    "segment": "flow_size_class",
+    "segment_label": "Mice vs elephant flows",
+    "group": "elephant"
+  },
+  {
+    "dataset": "flow_throughput__mice",
+    "distribution": "pareto",
+    "n": 600,
+    "params": {
+      "shape": 0.23998916412735194,
+      "loc": 0.0,
+      "scale": 4579.496936031991
+    },
+    "ks_statistic": 0.19153300233180576,
+    "ks_pvalue": 9.434849705613652e-20,
+    "aic": 18032.032883031563,
+    "bic": 18040.826742341997,
+    "log_likelihood": -9014.016441515781,
+    "label": "Flow throughput",
+    "caption": "best=pareto (shape=0.24, loc=0, scale=4579); KS D=0.1915, p=9.43e-20; AIC=18032.0, BIC=18040.8",
+    "segment": "flow_size_class",
+    "segment_label": "Mice vs elephant flows",
+    "group": "mice"
+  },
+  {
+    "dataset": "flow_throughput__elephant",
+    "distribution": "pareto",
+    "n": 92,
+    "params": {
+      "shape": 0.5315288316488869,
+      "loc": 0.0,
+      "scale": 448885.3567926807
+    },
+    "ks_statistic": 0.07669692158145655,
+    "ks_pvalue": 0.6233853635433821,
+    "aic": 3045.1310478069654,
+    "bic": 3050.1746249610633,
+    "log_likelihood": -1520.5655239034827,
+    "label": "Flow throughput",
+    "caption": "best=pareto (shape=0.5315, loc=0, scale=4.489e+05); KS D=0.0767, p=6.23e-01; AIC=3045.1, BIC=3050.2",
+    "segment": "flow_size_class",
+    "segment_label": "Mice vs elephant flows",
+    "group": "elephant"
+  },
+  {
+    "dataset": "iat__all",
+    "distribution": "poisson",
+    "n": 9999,
+    "params": {
+      "lambda": 34361.178981226614,
+      "mean_iat": 2.9102610261026097e-05,
+      "scale": 2.9102610261026097e-05
+    },
+    "ks_statistic": 0.5978181890342589,
+    "ks_pvalue": 0.0,
+    "aic": -188872.76439698346,
+    "bic": -188865.55415661648,
+    "log_likelihood": 94437.38219849173,
+    "label": "Inter-arrival time",
+    "caption": "best=poisson (lambda=3.436e+04, mean_iat=2.91e-05, scale=2.91e-05); KS D=0.5978, p=0.00e+00; AIC=-188872.8, BIC=-188865.6",
+    "segment": "app_proto",
+    "segment_label": "Application protocol",
+    "group": "all"
+  },
+  {
+    "dataset": "frame_len__all",
+    "distribution": "gamma",
+    "n": 10000,
+    "params": {
+      "shape": 0.718483859501341,
+      "loc": 0.0,
+      "scale": 1027.7814737724414
+    },
+    "ks_statistic": 0.2513844678727532,
+    "ks_pvalue": 0.0,
+    "aic": 151272.48744184696,
+    "bic": 151286.90812259092,
+    "log_likelihood": -75634.24372092348,
+    "label": "Packet size",
+    "caption": "best=gamma (shape=0.7185, loc=0, scale=1028); KS D=0.2514, p=0.00e+00; AIC=151272.5, BIC=151286.9",
+    "segment": "app_proto",
+    "segment_label": "Application protocol",
+    "group": "all"
+  },
+  {
+    "dataset": "flow_duration__all",
+    "distribution": "gamma",
+    "n": 692,
+    "params": {
+      "shape": 0.4586953057787982,
+      "loc": 0.0,
+      "scale": 0.2058372502590913
+    },
+    "ks_statistic": 0.16861808799635924,
+    "ks_pvalue": 1.1435032503190098e-17,
+    "aic": -2273.6820199588346,
+    "bic": -2264.6028480475993,
+    "log_likelihood": 1138.8410099794173,
+    "label": "Flow duration",
+    "caption": "best=gamma (shape=0.4587, loc=0, scale=0.2058); KS D=0.1686, p=1.14e-17; AIC=-2273.7, BIC=-2264.6",
+    "segment": "app_proto",
+    "segment_label": "Application protocol",
+    "group": "all"
+  },
+  {
+    "dataset": "flow_byte_sum__all",
+    "distribution": "pareto",
+    "n": 1834,
+    "params": {
+      "shape": 0.7232074044773247,
+      "loc": 0.0,
+      "scale": 60.0
+    },
+    "ks_statistic": 0.2638507082183811,
+    "ks_pvalue": 3.586329513652801e-113,
+    "aic": 24950.55584200801,
+    "bic": 24961.584351313642,
+    "log_likelihood": -12473.277921004004,
+    "label": "Flow size",
+    "caption": "best=pareto (shape=0.7232, loc=0, scale=60); KS D=0.2639, p=3.59e-113; AIC=24950.6, BIC=24961.6",
+    "segment": "app_proto",
+    "segment_label": "Application protocol",
+    "group": "all"
+  },
+  {
+    "dataset": "iat__http",
+    "distribution": "poisson",
+    "n": 5697,
+    "params": {
+      "lambda": 37320.42371160358,
+      "mean_iat": 2.6794979813937167e-05,
+      "scale": 2.6794979813937167e-05
+    },
+    "ks_statistic": 0.5998282369226364,
+    "ks_pvalue": 0.0,
+    "aic": -108552.01071936317,
+    "bic": -108545.36302436369,
+    "log_likelihood": 54277.005359681585,
+    "label": "Inter-arrival time",
+    "caption": "best=poisson (lambda=3.732e+04, mean_iat=2.679e-05, scale=2.679e-05); KS D=0.5998, p=0.00e+00; AIC=-108552.0, BIC=-108545.4",
+    "segment": "app_proto",
+    "segment_label": "Application protocol",
+    "group": "http"
+  },
+  {
+    "dataset": "iat__tls",
+    "distribution": "poisson",
+    "n": 993,
+    "params": {
+      "lambda": 36941.96428571428,
+      "mean_iat": 2.7069486404833838e-05,
+      "scale": 2.7069486404833838e-05
+    },
+    "ks_statistic": 0.5796434470766325,
+    "ks_pvalue": 4.2314934e-317,
+    "aic": -18898.967406761505,
+    "bic": -18894.06667609746,
+    "log_likelihood": 9450.483703380753,
+    "label": "Inter-arrival time",
+    "caption": "best=poisson (lambda=3.694e+04, mean_iat=2.707e-05, scale=2.707e-05); KS D=0.5796, p=4.23e-317; AIC=-18899.0, BIC=-18894.1",
+    "segment": "app_proto",
+    "segment_label": "Application protocol",
+    "group": "tls"
+  },
+  {
+    "dataset": "iat__dns",
+    "distribution": "poisson",
+    "n": 222,
+    "params": {
+      "lambda": 27570.789865871833,
+      "mean_iat": 3.627027027027027e-05,
+      "scale": 3.627027027027027e-05
+    },
+    "ks_statistic": 0.5919466463057105,
+    "ks_pvalue": 1.1076929096669773e-74,
+    "aic": -4093.683395966131,
+    "bic": -4090.2807185842585,
+    "log_likelihood": 2047.8416979830654,
+    "label": "Inter-arrival time",
+    "caption": "best=poisson (lambda=2.757e+04, mean_iat=3.627e-05, scale=3.627e-05); KS D=0.5919, p=1.11e-74; AIC=-4093.7, BIC=-4090.3",
+    "segment": "app_proto",
+    "segment_label": "Application protocol",
+    "group": "dns"
+  },
+  {
+    "dataset": "iat__rdp",
+    "distribution": "poisson",
+    "n": 125,
+    "params": {
+      "lambda": 34818.94150417828,
+      "mean_iat": 2.8719999999999996e-05,
+      "scale": 2.8719999999999996e-05
+    },
+    "ks_statistic": 0.6139880822272403,
+    "ks_pvalue": 7.617394292072972e-46,
+    "aic": -2362.4792034460625,
+    "bic": -2359.65088970876,
+    "log_likelihood": 1182.2396017230312,
+    "label": "Inter-arrival time",
+    "caption": "best=poisson (lambda=3.482e+04, mean_iat=2.872e-05, scale=2.872e-05); KS D=0.6140, p=7.62e-46; AIC=-2362.5, BIC=-2359.7",
+    "segment": "app_proto",
+    "segment_label": "Application protocol",
+    "group": "rdp"
+  },
+  {
+    "dataset": "frame_len__http",
+    "distribution": "gamma",
+    "n": 5698,
+    "params": {
+      "shape": 0.7155588751982344,
+      "loc": 0.0,
+      "scale": 1134.6279789600794
+    },
+    "ks_statistic": 0.31412869117769304,
+    "ks_pvalue": 0.0,
+    "aic": 87264.80745604928,
+    "bic": 87278.1031970794,
+    "log_likelihood": -43630.40372802464,
+    "label": "Packet size",
+    "caption": "best=gamma (shape=0.7156, loc=0, scale=1135); KS D=0.3141, p=0.00e+00; AIC=87264.8, BIC=87278.1",
+    "segment": "app_proto",
+    "segment_label": "Application protocol",
+    "group": "http"
+  },
+  {
+    "dataset": "frame_len__tls",
+    "distribution": "gamma",
+    "n": 993,
+    "params": {
+      "shape": 0.7278888848095565,
+      "loc": 0.0,
+      "scale": 1071.6308679253384
+    },
+    "ks_statistic": 0.274689898251294,
+    "ks_pvalue": 1.0399302200368723e-66,
+    "aic": 15140.529983885976,
+    "bic": 15150.331445214066,
+    "log_likelihood": -7568.264991942988,
+    "label": "Packet size",
+    "caption": "best=gamma (shape=0.7279, loc=0, scale=1072); KS D=0.2747, p=1.04e-66; AIC=15140.5, BIC=15150.3",
+    "segment": "app_proto",
+    "segment_label": "Application protocol",
+    "group": "tls"
+  },
+  {
+    "dataset": "frame_len__dns",
+    "distribution": "lognormal",
+    "n": 222,
+    "params": {
+      "shape": 0.8467898269297832,
+      "loc": 0.0,
+      "scale": 202.60937729572782
+    },
+    "ks_statistic": 0.1597598564374052,
+    "ks_pvalue": 2.0396986068900648e-05,
+    "aic": 2918.3785509912664,
+    "bic": 2925.183905755011,
+    "log_likelihood": -1457.1892754956332,
+    "label": "Packet size",
+    "caption": "best=lognormal (shape=0.8468, loc=0, scale=202.6); KS D=0.1598, p=2.04e-05; AIC=2918.4, BIC=2925.2",
+    "segment": "app_proto",
+    "segment_label": "Application protocol",
+    "group": "dns"
+  },
+  {
+    "dataset": "frame_len__rdp",
+    "distribution": "lognormal",
+    "n": 125,
+    "params": {
+      "shape": 0.2422023700116744,
+      "loc": 0.0,
+      "scale": 64.77297170232112
+    },
+    "ks_statistic": 0.41312004684978,
+    "ks_pvalue": 8.051993119401803e-20,
+    "aic": 1046.9613209076108,
+    "bic": 1052.6179483822154,
+    "log_likelihood": -521.4806604538054,
+    "label": "Packet size",
+    "caption": "best=lognormal (shape=0.2422, loc=0, scale=64.77); KS D=0.4131, p=8.05e-20; AIC=1047.0, BIC=1052.6",
+    "segment": "app_proto",
+    "segment_label": "Application protocol",
+    "group": "rdp"
+  },
+  {
+    "dataset": "flow_duration__http",
+    "distribution": "gamma",
+    "n": 371,
+    "params": {
+      "shape": 0.6057071058869243,
+      "loc": 0.0,
+      "scale": 0.16620322419493547
+    },
+    "ks_statistic": 0.14615335744257324,
+    "ks_pvalue": 2.2188017323569355e-07,
+    "aic": -1033.815180404802,
+    "bic": -1025.9827762795871,
+    "log_likelihood": 518.907590202401,
+    "label": "Flow duration",
+    "caption": "best=gamma (shape=0.6057, loc=0, scale=0.1662); KS D=0.1462, p=2.22e-07; AIC=-1033.8, BIC=-1026.0",
+    "segment": "app_proto",
+    "segment_label": "Application protocol",
+    "group": "http"
+  },
+  {
+    "dataset": "flow_duration__dns",
+    "distribution": "gamma",
+    "n": 60,
+    "params": {
+      "shape": 0.3052856014016635,
+      "loc": 0.0,
+      "scale": 0.14760770240059384
+    },
+    "ks_statistic": 0.18228644983498832,
+    "ks_pvalue": 0.032330316105925294,
+    "aic": -346.3357431033493,
+    "bic": -342.1470539789051,
+    "log_likelihood": 175.16787155167464,
+    "label": "Flow duration",
+    "caption": "best=gamma (shape=0.3053, loc=0, scale=0.1476); KS D=0.1823, p=3.23e-02; AIC=-346.3, BIC=-342.1",
+    "segment": "app_proto",
+    "segment_label": "Application protocol",
+    "group": "dns"
+  },
+  {
+    "dataset": "flow_duration__tls",
+    "distribution": "gamma",
+    "n": 89,
+    "params": {
+      "shape": 0.2899771978950722,
+      "loc": 0.0,
+      "scale": 0.2599599309179085
+    },
+    "ks_statistic": 0.22727045615734576,
+    "ks_pvalue": 0.00016012354565343273,
+    "aic": -441.4469063430509,
+    "bic": -436.4696336035866,
+    "log_likelihood": 222.72345317152545,
+    "label": "Flow duration",
+    "caption": "best=gamma (shape=0.29, loc=0, scale=0.26); KS D=0.2273, p=1.60e-04; AIC=-441.4, BIC=-436.5",
+    "segment": "app_proto",
+    "segment_label": "Application protocol",
+    "group": "tls"
+  },
+  {
+    "dataset": "flow_byte_sum__http",
+    "distribution": "pareto",
+    "n": 617,
+    "params": {
+      "shape": 0.503124320159909,
+      "loc": 0.0,
+      "scale": 60.0
+    },
+    "ks_statistic": 0.21831669025273193,
+    "ks_pvalue": 2.664396911400129e-26,
+    "aic": 9590.752101218273,
+    "bic": 9599.601839266084,
+    "log_likelihood": -4793.376050609137,
+    "label": "Flow size",
+    "caption": "best=pareto (shape=0.5031, loc=0, scale=60); KS D=0.2183, p=2.66e-26; AIC=9590.8, BIC=9599.6",
+    "segment": "app_proto",
+    "segment_label": "Application protocol",
+    "group": "http"
+  },
+  {
+    "dataset": "flow_byte_sum__dns",
+    "distribution": "lognormal",
+    "n": 161,
+    "params": {
+      "shape": 0.892061610413594,
+      "loc": 0.0,
+      "scale": 274.4964630900565
+    },
+    "ks_statistic": 0.11020841564589878,
+    "ks_pvalue": 0.037004508260378155,
+    "aic": 2232.129499368343,
+    "bic": 2238.2923080983123,
+    "log_likelihood": -1114.0647496841716,
+    "label": "Flow size",
+    "caption": "best=lognormal (shape=0.8921, loc=0, scale=274.5); KS D=0.1102, p=3.70e-02; AIC=2232.1, BIC=2238.3",
+    "segment": "app_proto",
+    "segment_label": "Application protocol",
+    "group": "dns"
+  },
+  {
+    "dataset": "flow_byte_sum__tls",
+    "distribution": "pareto",
+    "n": 148,
+    "params": {
+      "shape": 0.5095372241373963,
+      "loc": 0.0,
+      "scale": 60.0
+    },
+    "ks_statistic": 0.07028344021310207,
+    "ks_pvalue": 0.43778781910118103,
+    "aic": 2292.423976742767,
+    "bic": 2298.418401290295,
+    "log_likelihood": -1144.2119883713835,
+    "label": "Flow size",
+    "caption": "best=pareto (shape=0.5095, loc=0, scale=60); KS D=0.0703, p=4.38e-01; AIC=2292.4, BIC=2298.4",
+    "segment": "app_proto",
+    "segment_label": "Application protocol",
+    "group": "tls"
+  }
+]

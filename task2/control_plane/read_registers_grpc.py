@@ -17,12 +17,11 @@ from bmv2_grpc import (
     read_global_state,
 )
 
-try:
-    import bmv2_cli
-except ImportError:
-    bmv2_cli = None  # type: ignore[assignment]
+_UTILS = Path(__file__).resolve().parents[1] / "utils"
+if str(_UTILS) not in sys.path:
+    sys.path.insert(0, str(_UTILS))
 
-_DEFAULT_THRIFT_PORT = 9090
+from p4runtime_lib.error_utils import printGrpcError  # noqa: E402
 
 
 def main() -> int:
@@ -35,15 +34,6 @@ def main() -> int:
         help=f"P4Runtime server address (default: {DEFAULT_GRPC_ADDR})",
     )
     parser.add_argument("--device-id", type=int, default=DEFAULT_DEVICE_ID)
-    parser.add_argument(
-        "--thrift-port",
-        type=int,
-        default=_DEFAULT_THRIFT_PORT,
-        help=(
-            "Fallback Thrift port when P4Runtime register reads are unsupported "
-            f"(default: {_DEFAULT_THRIFT_PORT}; requires simple_switch_grpc built with --with-thrift)."
-        ),
-    )
     parser.add_argument(
         "--max-flows",
         type=int,
@@ -65,7 +55,6 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    transport = "p4runtime_grpc"
     try:
         global_state = read_global_state(args.grpc_addr, device_id=args.device_id)
         flows = read_active_flows(
@@ -75,41 +64,20 @@ def main() -> int:
             min_packets=args.min_packets,
         )
     except grpc.RpcError as exc:
-        if bmv2_cli is None or exc.code() not in (
-            grpc.StatusCode.UNIMPLEMENTED,
-            grpc.StatusCode.UNKNOWN,
-        ):
-            print(f"P4Runtime error: {exc}", file=sys.stderr)
-            print("Is Mininet running with make run-grpc?", file=sys.stderr)
-            return 1
-        try:
-            global_state = bmv2_cli.read_global_state(args.thrift_port)
-            flows = bmv2_cli.read_active_flows(
-                args.thrift_port,
-                max_flows=args.max_flows,
-                min_packets=args.min_packets,
-            )
-            transport = "thrift_fallback"
-            print(
-                "Note: BMv2 does not support P4Runtime register reads (PI#376); "
-                f"used simple_switch_CLI on port {args.thrift_port}.",
-                file=sys.stderr,
-            )
-        except Exception as fallback_exc:
-            print(f"P4Runtime error: {exc}", file=sys.stderr)
-            print(
-                "Register reads are not implemented over P4Runtime on BMv2. "
-                "Use make run + read_registers.py, or parse in-band telemetry from data/capture.pcap.",
-                file=sys.stderr,
-            )
-            print(f"Thrift fallback failed: {fallback_exc}", file=sys.stderr)
-            return 1
+        print(f"P4Runtime error: {exc}", file=sys.stderr)
+        printGrpcError(exc)
+        print("Ensure Mininet is running with: make run-grpc", file=sys.stderr)
+        print(
+            "For Thrift register reads use: python3 control_plane/read_registers_thrift.py",
+            file=sys.stderr,
+        )
+        return 1
     except Exception as exc:
         print(exc, file=sys.stderr)
         return 1
 
     summary = {
-        "transport": transport,
+        "transport": "p4runtime_grpc",
         "grpc_addr": args.grpc_addr,
         "device_id": args.device_id,
         "global": global_state,

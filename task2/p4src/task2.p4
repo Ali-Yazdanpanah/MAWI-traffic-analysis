@@ -15,8 +15,8 @@ const ip4Addr_t SWITCH_REPORT_IPV4 = 32w0x0A0000FE;   // 10.0.0.254
 const macAddr_t COLLECTOR_MAC = 48w0x000000000002;
 const macAddr_t REPORT_SRC_MAC = 48w0x0000000000FE;
 const bit<32> INT_REPORT_MAGIC = 32w0x494E5431;         // "INT1"
-const bit<16> INT_REPORT_PAYLOAD_LEN = 50;
-const bit<16> INT_UDP_PKT_LEN = 78;                     // IPv4(20) + UDP(8) + payload
+const bit<16> INT_REPORT_PAYLOAD_LEN = 54;
+const bit<16> INT_UDP_PKT_LEN = 82;                     // IPv4(20) + UDP(8) + payload
 const bit<32> CLONE_SESSION_INT = 1;
 const bit<32> PKT_INSTANCE_TYPE_EGRESS_CLONE = 2;
 
@@ -196,31 +196,17 @@ control MyIngress(inout headers hdr, inout metadata meta, inout standard_metadat
     register<bit<48>>(1) last_packet_timestamp;
     register<bit<1>>(1) last_ts_valid;
 
-    action set_export_inband() {
-        meta.export_mode = 2w0;
+    action set_export_mode(bit<2> mode) {
+        meta.export_mode = mode;
     }
-
-    action set_export_udp() {
-        meta.export_mode = 2w1;
-    }
-
-    action set_export_both() {
-        meta.export_mode = 2w2;
-    }
-
-    action noop_export_mode() { }
 
     table configure_export_mode {
         key = {
             standard_metadata.ingress_port : exact;
         }
         actions = {
-            set_export_inband;
-            set_export_udp;
-            set_export_both;
-            noop_export_mode;
+            set_export_mode;
         }
-        default_action = noop_export_mode();
         size = 4;
     }
 
@@ -335,14 +321,13 @@ control MyIngress(inout headers hdr, inout metadata meta, inout standard_metadat
     apply {
         meta.l3_byte_len = 0;
         meta.export_mode = 2w0;
+        configure_export_mode.apply();
 
         if (hdr.ipv4.isValid()) {
             meta.l3_byte_len = (bit<32>)hdr.ipv4.totalLen;
-            configure_export_mode.apply();
             hash_ipv4_flow();
         } else if (hdr.ipv6.isValid()) {
             meta.l3_byte_len = (bit<32>)hdr.ipv6.payloadLength + IPV6_HDR_LEN;
-            configure_export_mode.apply();
             hash_ipv6_flow();
         }
 
@@ -425,9 +410,11 @@ control MyEgress(inout headers hdr, inout metadata meta, inout standard_metadata
             obs_ipv4_src = hdr.ipv4.srcAddr;
             obs_ipv4_dst = hdr.ipv4.dstAddr;
             obs_ip_proto = hdr.ipv4.protocol;
+            obs_l3_len = (bit<32>)hdr.ipv4.totalLen;
         } else if (hdr.ipv6.isValid()) {
             obs_ip_version = 6;
             obs_ip_proto = hdr.ipv6.nextHeader;
+            obs_l3_len = (bit<32>)hdr.ipv6.payloadLength + IPV6_HDR_LEN;
         }
         if (hdr.tcp.isValid()) {
             obs_src_port = hdr.tcp.srcPort;
@@ -488,13 +475,14 @@ control MyEgress(inout headers hdr, inout metadata meta, inout standard_metadata
         if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_EGRESS_CLONE) {
             build_udp_int_report();
         } else if (standard_metadata.egress_port == (bit<9>)2) {
+            // Clone before stripping telemetry so the INT report keeps valid fields.
+            if (meta.export_mode == 2w1 || meta.export_mode == 2w2) {
+                clone(CloneType.E2E, CLONE_SESSION_INT);
+            }
             if (meta.export_mode == 2w0 || meta.export_mode == 2w2) {
                 // Keep in-band telemetry trailer on forwarded packets.
             } else {
                 hdr.telemetry.setInvalid();
-            }
-            if (meta.export_mode == 2w1 || meta.export_mode == 2w2) {
-                clone(E2E, CLONE_SESSION_INT);
             }
         } else {
             hdr.telemetry.setInvalid();

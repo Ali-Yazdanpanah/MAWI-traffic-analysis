@@ -1,0 +1,11 @@
+{
+  "hurst": 0.7850389824897033,
+  "slope": 1.5700779649794065,
+  "r_squared": 0.9977554548537112,
+  "n_bins": 287,
+  "n_scales": 6,
+  "bin_rule": "10ms",
+  "bin_seconds": 0.01,
+  "duration_s": 2.8676228523254395,
+  "summary": "H \u2248 0.79 (long-range dependence (burstiness); variance-time, 6 scales, R\u00b2=1.00)"
+}

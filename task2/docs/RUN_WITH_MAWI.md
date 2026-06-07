@@ -2,6 +2,10 @@
 
 For a full comparison of **export** (P4: in-band / UDP / both) vs **collection** (h2 sniff, tcpdump, switch pcap, register read), see [Getting telemetry out of the data plane](../README.md#getting-telemetry-out-of-the-data-plane) in `task2/README.md`.
 
+**Step-by-step runbooks** (one per capture method): [runbooks/README.md](runbooks/README.md)
+
+**Trace alignment with Task I:** `make trace-prepare` writes `data/mawi_10000.pcap` (first 10,000 frames from `201302011400`). Task I should use the same head of the capture (`plot_analysis … -n 10000` on JSONL exported in file order). Task III comparison: [`../../notebooks/task3_comparison.ipynb`](../../notebooks/task3_comparison.ipynb).
+
 ## Which file is which?
 
 | File | Use |
@@ -30,10 +34,10 @@ make trace-prepare          # or: PACKET_LIMIT=10000 ./scripts/prepare_trace.sh
 
 | Command | Binary | Register access |
 |---------|--------|-----------------|
-| **`make run`** (default) | `simple_switch` | Thrift **9090** — `controller.py`, `read_registers.py` |
+| **`make run-thrift`** (default) | `simple_switch` | Thrift **9090** — `controller_thrift.py`, `read_registers_thrift.py` |
 | **`make run-grpc`** (homework) | `simple_switch_grpc` | P4Runtime gRPC **50051** — pipeline load + reset via `controller_grpc.py` |
 
-After `make run`, verify: `ss -tln | grep 9090`  
+After `make run-thrift`, verify: `ss -tln | grep 9090`  
 After `make run-grpc`, verify: `ss -tln | grep 50051`
 
 ### gRPC workflow (matches homework PDF)
@@ -58,7 +62,7 @@ REPLAY_MULTIPLIER=0.001 make test-mawi
 python3 control_plane/read_registers_grpc.py -o data/registers_grpc.json
 # or: make read-registers-grpc
 
-python3 control_plane/run_pipeline.py \
+python3 control_plane/pipeline_capture_jsonl.py \
   --capture-jsonl data/capture.jsonl \
   --use-grpc \
   --dump-registers data/registers_grpc.json
@@ -74,7 +78,7 @@ docker compose build
 docker compose up -d
 docker exec -it task2-p4-env bash
 cd /p4
-pip3 install -r requirements.txt   # if not already in image
+# Python deps (scipy, pandas, …) are installed by the Docker image / entrypoint.
 ```
 
 Inside the container, `/p4` = `task2/`, `/repo` = repo root (read-only).
@@ -92,7 +96,7 @@ PACKET_LIMIT=10000 ./scripts/prepare_trace.sh
 ```bash
 cd /p4
 make build
-make run
+make run-thrift
 ```
 
 You should get a `mininet>` prompt. Leave this open.
@@ -104,7 +108,7 @@ Open a **second** shell into the same container:
 ```bash
 docker exec -it task2-p4-env bash
 cd /p4
-sudo python3 control_plane/controller.py
+sudo python3 control_plane/controller_thrift.py
 ```
 
 ## 5. Capture on h2 and replay from h1 (terminal A, at `mininet>`)
@@ -116,7 +120,7 @@ Telemetry is appended on **egress port 2** (host h2). Start capture, then replay
 Parses telemetry in Python on the wire — no intermediate pcap:
 
 ```text
-mininet> h2 sh -c 'python3 /p4/control_plane/capture_packets.py --interface eth0 -n 10000 -o /p4/data/capture.jsonl &'
+mininet> h2 sh -c 'python3 /p4/control_plane/capture_inband.py --interface eth0 -n 10000 -o /p4/data/capture.jsonl &'
 mininet> h1 sh -c 'tcpreplay --multiplier=0.001 -i eth0 /p4/data/mawi_10000.pcap'
 ```
 
@@ -127,7 +131,7 @@ mininet> h2 sh /p4/scripts/capture_on_h2.sh /p4/data/capture.jsonl 10000 eth0 &
 mininet> h1 sh -c 'tcpreplay --multiplier=0.001 -i eth0 /p4/data/mawi_10000.pcap'
 ```
 
-Automated (third terminal while `make run` is up):
+Automated (third terminal while `make run-thrift` is up):
 
 ```bash
 REPLAY_MULTIPLIER=0.001 make test-mawi
@@ -162,10 +166,10 @@ CAPTURE_MODE=pcap CAPTURE_SOURCE=switch REPLAY_MULTIPLIER=0.001 make test-mawi
 Manual parse after replay:
 
 ```bash
-python3 control_plane/run_pipeline.py --pcap pcaps/s1-eth2.pcap -n 10000
+python3 control_plane/pipeline_capture_jsonl.py --pcap pcaps/s1-eth2.pcap -n 10000
 ```
 
-The switch pcap grows for the whole Mininet session; use `-n 10000` (or reset with a fresh `make run`) to limit analysis to the replay batch.
+The switch pcap grows for the whole Mininet session; use `-n 10000` (or reset with a fresh `make run-thrift`) to limit analysis to the replay batch.
 
 ### UDP INT export
 
@@ -174,17 +178,17 @@ The switch clones each observed packet into a small UDP report (port **4790**) t
 Configure export mode, then capture INT reports on h2:
 
 ```bash
-# Thrift (make run):
-python3 control_plane/set_export_mode.py --mode udp
+# Thrift (make run-thrift):
+python3 control_plane/set_export_mode_thrift.py --mode udp
 
 # P4Runtime (make run-grpc):
-python3 control_plane/set_export_mode.py --mode udp --use-grpc
+python3 control_plane/set_export_mode_grpc.py --mode udp
 ```
 
 Manual Mininet:
 
 ```text
-mininet> h2 sh -c 'python3 /p4/control_plane/capture_packets.py --interface eth0 --int-udp -n 10000 -o /p4/data/capture.jsonl &'
+mininet> h2 sh -c 'python3 /p4/control_plane/capture_udp_int.py --interface eth0 -n 10000 -o /p4/data/capture.jsonl &'
 mininet> h1 sh -c 'tcpreplay --multiplier=0.001 -i eth0 /p4/data/mawi_10000.pcap'
 ```
 
@@ -207,25 +211,27 @@ Wait until tcpreplay finishes and capture stops.
 ```bash
 cd /p4
 # After live sniff (default test-mawi path):
-python3 control_plane/run_pipeline.py --capture-jsonl data/capture.jsonl
+python3 control_plane/pipeline_capture_jsonl.py --capture-jsonl data/capture.jsonl
 
 # After tcpdump pcap:
-python3 control_plane/capture_packets.py --pcap data/capture.pcap
-python3 control_plane/plot_analysis.py
+python3 control_plane/capture_inband.py --pcap data/capture.pcap
+python3 control_plane/plot_capture_jsonl.py
 # plots -> task2/results/n_<N>/plots/
 ```
+
+Precomputed **`task2/results/n_10000/`** plots and fits are committed for [`../../notebooks/task3_comparison.ipynb`](../../notebooks/task3_comparison.ipynb).
 
 Optional register snapshot for Task III:
 
 ```bash
-sudo python3 control_plane/read_registers.py --max-flows 16384 -o data/registers.json
+sudo python3 control_plane/read_registers_thrift.py --max-flows 16384 -o data/registers.json
 ```
 
 One-shot (live JSONL or pcap):
 
 ```bash
-python3 control_plane/run_pipeline.py --capture-jsonl data/capture.jsonl --dump-registers data/registers.json
-# or: python3 control_plane/run_pipeline.py --pcap data/capture.pcap --dump-registers data/registers.json
+python3 control_plane/pipeline_capture_jsonl.py --capture-jsonl data/capture.jsonl --dump-registers data/registers.json
+# or: python3 control_plane/pipeline_capture_jsonl.py --pcap data/capture.pcap --dump-registers data/registers.json
 ```
 
 ## 7. Stop
@@ -243,9 +249,9 @@ make stop
 | Problem | Fix |
 |---------|-----|
 | `No trace found` in prepare script | Put `201302011400.dump.gz` in repo root; rebuild container if `/repo` mount missing |
-| `simple_switch_CLI not found` | Run inside `task2-p4-env` after `make run` |
-| `No telemetry-tagged packets` in capture | For `live`/`pcap`: capture on **h2**; for `udp`: run `set_export_mode.py --mode udp` and sniff port 4790 |
-| Switch pcap empty / missing | Start with `make run` (BMv2 `--pcap pcaps/` is on by default); replay at least one packet |
-| UDP mode empty capture | Run `make build` after P4 changes; ensure clone session configured (`set_export_mode.py`) |
+| `simple_switch_CLI not found` | Run inside `task2-p4-env` after `make run-thrift` |
+| `No telemetry-tagged packets` in capture | For `live`/`pcap`: capture on **h2**; for `udp`: run `set_export_mode_grpc.py --mode udp` and sniff port 4790 |
+| Switch pcap empty / missing | Start with `make run-thrift` (BMv2 `--pcap pcaps/` is on by default); replay at least one packet |
+| UDP mode empty capture | Run `make build` after P4 changes; ensure clone session configured (`set_export_mode_grpc.py`) |
 | Capture empty | Reset registers before replay; check `make build` succeeded |
-| Compare with Task I | Task I uses `201302011400.jsonl`; Task II uses switch timestamps (µs) and L3 byte counts |
+| Compare with Task I | Same first 10,000 packets of `201302011400`; Task I uses JSONL/tshark, Task II uses replay + switch timestamps (µs) and on-wire frame lengths |

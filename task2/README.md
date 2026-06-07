@@ -74,7 +74,7 @@ flowchart LR
   end
 
   subgraph analysis
-    JSONL --> PIPE["run_pipeline.py"]
+    JSONL --> PIPE["pipeline_capture_jsonl.py"]
     PCAP --> PIPE
     PIPE --> PLOTS["results/n_N/plots/"]
     PIPE --> FITS["results/n_N/statistical-fits/"]
@@ -147,7 +147,7 @@ The image is based on `p4lang/p4c` and includes: `p4c`, BMv2 (`simple_switch`, `
 
 ## End-to-end workflow
 
-Detailed steps also in **[docs/RUN_WITH_MAWI.md](docs/RUN_WITH_MAWI.md)**.
+Detailed steps also in **[docs/RUN_WITH_MAWI.md](docs/RUN_WITH_MAWI.md)**. Per-method runbooks: **[docs/runbooks/](docs/runbooks/README.md)**.
 
 ### 1. Prepare replay PCAP (once)
 
@@ -181,7 +181,7 @@ make run-grpc
 **Thrift path:**
 
 ```bash
-make run
+make run-thrift
 # simple_switch_CLI on Thrift port 9090
 ```
 
@@ -197,7 +197,7 @@ sudo python3 control_plane/controller_grpc.py
 # or: make reset-grpc
 
 # Thrift:
-sudo python3 control_plane/controller.py
+sudo python3 control_plane/controller_thrift.py
 ```
 
 Reset clears flow registers and global IAT state (gRPC path reloads the pipeline; Thrift uses `register_reset`).
@@ -214,12 +214,12 @@ Slow replay avoids BMv2 drops (`REPLAY_MULTIPLIER=0.001` or lower if needed).
 ### 6. Plot and fit
 
 ```bash
-python3 control_plane/run_pipeline.py --capture-jsonl data/capture.jsonl
+python3 control_plane/pipeline_capture_jsonl.py --capture-jsonl data/capture.jsonl
 # or after pcap/switch capture:
-python3 control_plane/run_pipeline.py --pcap pcaps/s1-eth2.pcap -n 10000
+python3 control_plane/pipeline_capture_jsonl.py --pcap pcaps/s1-eth2.pcap -n 10000
 ```
 
-Results under `task2/results/n_<N>/`.
+Results under `task2/results/n_<N>/`. Precomputed **`n_10000`** plots and fit summaries are committed for the Task III notebook.
 
 ### 7. Stop
 
@@ -238,7 +238,7 @@ make stop
 | Target | Description |
 |--------|-------------|
 | `make build` | Compile `p4src/task2.p4` → `build/task2.json` + P4Info |
-| `make run` | Mininet + `simple_switch` (Thrift **9090**) |
+| `make run-thrift` | Mininet + `simple_switch` (Thrift **9090**) |
 | `make run-grpc` | Mininet + `simple_switch_grpc` (P4Runtime **50051**) |
 | `make trace-prepare` | Decompress MAWI dump → `data/mawi_<N>.pcap` |
 | `make test-mawi` | Automated replay + capture (see [Getting telemetry out of the data plane](#getting-telemetry-out-of-the-data-plane)) |
@@ -252,13 +252,13 @@ make stop
 | Variable | Default | Meaning |
 |----------|---------|---------|
 | `PACKET_LIMIT` | `10000` | Packets in replay subset and capture target |
-| `REPLAY_MULTIPLIER` | `0.01` | `tcpreplay` rate on h1 |
+| `REPLAY_MULTIPLIER` | `0.001` | `tcpreplay` rate on h1 (lower if BMv2 drops packets) |
 | `CAPTURE_MODE` | `live` | `live`, `pcap`, `udp`, or `switch` |
 | `CAPTURE_SOURCE` | `h2` | `h2` or `switch` (in-band / pcap paths) |
 | `CAPTURE_TIMEOUT` | `300` | Live / UDP sniff timeout (seconds) |
 | `CAPTURE_USE_GRPC` | `0` | Set `1` with `make run-grpc` to configure export mode via P4Runtime |
 | `INT_UDP_PORT` | `4790` | UDP INT collector port |
-| `SWITCH_PCAP` | `pcaps/s1-eth2.pcap` | BMv2 port-2 dump path |
+| `SWITCH_PCAP` | `pcaps/s1-eth2_out.pcap` | BMv2 port-2 egress dump (`test_mawi.sh` falls back to legacy `s1-eth2.pcap`) |
 
 ---
 
@@ -294,14 +294,14 @@ Task II metrics (IAT, flow counters, timestamps) leave the switch in **three fun
 └──────────────────────────────────────────────────────────────────────────┘
                │
                ▼
-     capture_packets.py  or  run_pipeline.py  →  results/n_<N>/
+     capture_inband.py / capture_udp_int.py → pipeline_capture_jsonl.py → results/n_<N>/
 ```
 
 | Layer | What you configure | Tools |
 |-------|-------------------|--------|
-| **P4 export** | `set_export_mode.py --mode inband\|udp\|both` | Switch program |
+| **P4 export** | `set_export_mode_thrift.py` or `set_export_mode_grpc.py` | Switch program |
 | **Collection** | `CAPTURE_MODE` + `CAPTURE_SOURCE` in `make test-mawi` | h2 sniff, tcpdump, or switch pcap |
-| **Register read** | `read_registers.py` / `read_registers_grpc.py` | Thrift 9090 or gRPC 50051 |
+| **Register read** | `read_registers_thrift.py` / `read_registers_grpc.py` | Thrift 9090 or gRPC 50051 |
 
 ---
 
@@ -311,7 +311,7 @@ Task II metrics (IAT, flow counters, timestamps) leave the switch in **three fun
 
 **Best for:** Per-packet IAT distributions, Task I–style plots, homework default path.
 
-**Collection options** (all parse the same trailer with `capture_packets.py`):
+**Collection options** (in-band trailer parsed by `capture_inband.py`):
 
 | Collection | Where | Output | `make test-mawi` |
 |------------|-------|--------|------------------|
@@ -325,26 +325,26 @@ REPLAY_MULTIPLIER=0.001 make test-mawi
 
 # Switch port pcap (no collector on h2)
 CAPTURE_MODE=switch REPLAY_MULTIPLIER=0.001 make test-mawi
-python3 control_plane/run_pipeline.py --pcap pcaps/s1-eth2.pcap -n 10000
+python3 control_plane/pipeline_capture_jsonl.py --pcap pcaps/s1-eth2.pcap -n 10000
 
 # Manual Mininet
-mininet> h2 python3 /p4/control_plane/capture_packets.py --interface eth0 -n 10000 -o /p4/data/capture.jsonl &
+mininet> h2 python3 /p4/control_plane/capture_inband.py --interface eth0 -n 10000 -o /p4/data/capture.jsonl &
 mininet> h1 tcpreplay -i eth0 --multiplier=0.001 /p4/data/mawi_10000.pcap
 ```
 
 **Parse / plot:**
 
 ```bash
-python3 control_plane/capture_packets.py --pcap data/capture.pcap -o data/capture.jsonl
-python3 control_plane/run_pipeline.py --capture-jsonl data/capture.jsonl
-# or: python3 control_plane/plot_analysis.py data/capture.jsonl
+python3 control_plane/capture_inband.py --pcap data/capture.pcap -o data/capture.jsonl
+python3 control_plane/pipeline_capture_jsonl.py --capture-jsonl data/capture.jsonl
+# or: python3 control_plane/plot_capture_jsonl.py data/capture.jsonl
 ```
 
 ---
 
 ### Method 2 — UDP INT report export
 
-**What the data plane does:** Instead of (or in addition to) the in-band trailer, egress **clones** each packet and emits a separate UDP datagram to collector **10.0.0.2:4790**. Payload is a 50-byte `INT1` report (telemetry fields + mirrored 5-tuple). Forwarded traffic on h2 has **no** in-band trailer when export mode is `udp` only.
+**What the data plane does:** Instead of (or in addition to) the in-band trailer, egress **clones** each packet and emits a separate UDP datagram to collector **10.0.0.2:4790**. Payload is a 54-byte `INT1` report (telemetry fields + mirrored 5-tuple). Forwarded traffic on h2 has **no** in-band trailer when export mode is `udp` only.
 
 **Best for:** Production-style telemetry export (out-of-band reports), comparing against in-band capture in Task III.
 
@@ -352,17 +352,17 @@ python3 control_plane/run_pipeline.py --capture-jsonl data/capture.jsonl
 
 ```bash
 # Configure switch (before replay)
-python3 control_plane/set_export_mode.py --mode udp --use-grpc   # with make run-grpc
-# or: python3 control_plane/set_export_mode.py --mode udp         # with make run
+python3 control_plane/set_export_mode_grpc.py --mode udp   # with make run-grpc
+# or: python3 control_plane/set_export_mode_thrift.py --mode udp   # with make run-thrift
 
 # Automated
 CAPTURE_MODE=udp CAPTURE_USE_GRPC=1 REPLAY_MULTIPLIER=0.001 make test-mawi
 
 # Manual
-mininet> h2 python3 /p4/control_plane/capture_packets.py --interface eth0 --int-udp -n 10000 -o /p4/data/capture.jsonl &
+mininet> h2 python3 /p4/control_plane/capture_udp_int.py --interface eth0 -n 10000 -o /p4/data/capture.jsonl &
 ```
 
-**Parse / plot:** Same JSONL pipeline as Method 1 (`plot_analysis.py` / `run_pipeline.py`).
+**Parse / plot:** Same JSONL pipeline as Method 1 (`plot_capture_jsonl.py` / `pipeline_capture_jsonl.py`).
 
 ---
 
@@ -371,7 +371,7 @@ mininet> h2 python3 /p4/control_plane/capture_packets.py --interface eth0 --int-
 **What the data plane does:** Forwarded packets keep the in-band trailer **and** a UDP INT clone is sent to h2.
 
 ```bash
-python3 control_plane/set_export_mode.py --mode both --use-grpc
+python3 control_plane/set_export_mode_grpc.py --mode both
 ```
 
 You can capture either path (or run two collectors). In-band: Methods 1A–1C. UDP: Method 2.
@@ -386,12 +386,12 @@ You can capture either path (or run two collectors). In-band: Methods 1A–1C. U
 
 | API | Command | Output |
 |-----|---------|--------|
-| **Thrift** (`make run`) | `python3 control_plane/read_registers.py -o data/registers.json` | JSON flow snapshot |
+| **Thrift** (`make run-thrift`) | `python3 control_plane/read_registers_thrift.py -o data/registers.json` | JSON flow snapshot |
 | **P4Runtime gRPC** (`make run-grpc`) | `make read-registers-grpc` | `data/registers_grpc.json` |
 
 ```bash
-# Optional alongside capture in run_pipeline.py
-python3 control_plane/run_pipeline.py --capture-jsonl data/capture.jsonl \
+# Optional alongside capture in pipeline_capture_jsonl.py
+python3 control_plane/pipeline_capture_jsonl.py --capture-jsonl data/capture.jsonl \
   --dump-registers data/registers.json --use-grpc
 ```
 
@@ -419,7 +419,7 @@ python3 control_plane/run_pipeline.py --capture-jsonl data/capture.jsonl \
 | `CAPTURE_TIMEOUT` | `300` | Live / UDP sniff timeout (seconds) |
 | `CAPTURE_USE_GRPC` | `0` | Set `1` with `make run-grpc` for `set_export_mode` via P4Runtime |
 | `INT_UDP_PORT` | `4790` | UDP INT collector port |
-| `SWITCH_PCAP` | `pcaps/s1-eth2.pcap` | BMv2 port-2 dump path |
+| `SWITCH_PCAP` | `pcaps/s1-eth2_out.pcap` | BMv2 port-2 egress dump (`test_mawi.sh` falls back to legacy `s1-eth2.pcap`) |
 
 ### Choosing a method
 
@@ -439,19 +439,19 @@ python3 control_plane/run_pipeline.py --capture-jsonl data/capture.jsonl \
 | Tap point | Host NIC (`eth0`) | Switch port 2 |
 | When it records | While collector runs | Entire Mininet session |
 | Extra traffic | Usually replay window only | May include startup noise |
-| Setup | tcpdump or Scapy | Automatic with `make run` |
+| Setup | tcpdump or Scapy | Automatic with `make run-thrift` |
 
 Use **port 2** (`s1-eth2.pcap`), not `s1-eth1.pcap` (h1 side).
 
 ### Configure P4 export mode
 
-`test_mawi.sh` calls `set_export_mode.py` automatically. Manual control:
+`test_mawi.sh` calls `set_export_mode_thrift.py` or `set_export_mode_grpc.py` (via `CAPTURE_USE_GRPC`) automatically. Manual control:
 
 ```bash
-python3 control_plane/set_export_mode.py --mode inband          # Methods 1A–1C
-python3 control_plane/set_export_mode.py --mode udp --use-grpc  # Method 2
-python3 control_plane/set_export_mode.py --mode both            # Method 3
-python3 control_plane/set_export_mode.py --capture-mode switch  # maps to inband
+python3 control_plane/set_export_mode_thrift.py --mode inband          # Methods 1A–1C (make run-thrift)
+python3 control_plane/set_export_mode_grpc.py --mode udp                 # Method 2 (make run-grpc)
+python3 control_plane/set_export_mode_grpc.py --mode both                # Method 3
+python3 control_plane/set_export_mode_thrift.py --capture-mode switch  # maps to inband
 ```
 
 Helper script: `scripts/capture_on_h2.sh` (respects `CAPTURE_MODE` / `CAPTURE_SOURCE`).
@@ -460,19 +460,19 @@ Helper script: `scripts/capture_on_h2.sh` (respects `CAPTURE_MODE` / `CAPTURE_SO
 
 ## Thrift vs P4Runtime gRPC
 
-| | **`make run`** | **`make run-grpc`** |
+| | **`make run-thrift`** | **`make run-grpc`** |
 |--|----------------|---------------------|
 | BMv2 binary | `simple_switch` | `simple_switch_grpc` |
 | Control API | Thrift **9090** (`simple_switch_CLI`) | gRPC **50051** (P4Runtime) |
-| Reset registers | `controller.py` / `register_reset` | `controller_grpc.py` / pipeline reload |
-| Register read | `read_registers.py` (works) | `read_registers_grpc.py` (reads often work; writes do not) |
-| Set export mode | `set_export_mode.py` (default) | `set_export_mode.py --use-grpc` |
+| Reset registers | `controller_thrift.py` / `register_reset` | `controller_grpc.py` / pipeline reload |
+| Register read | `read_registers_thrift.py` (works) | `read_registers_grpc.py` (reads often work; writes do not) |
+| Set export mode | `set_export_mode_thrift.py` | `set_export_mode_grpc.py` |
 | Pipeline load | BMv2 JSON at switch start | P4Runtime `SetForwardingPipelineConfig` |
 
 Verify ports:
 
 ```bash
-ss -tln | grep 9090   # after make run
+ss -tln | grep 9090   # after make run-thrift
 ss -tln | grep 50051  # after make run-grpc
 ```
 
@@ -507,7 +507,7 @@ Appended on **egress port 2** when export mode is in-band (or both):
 
 ### UDP INT report (optional)
 
-When export mode is **udp** or **both**, egress clones a packet and replaces it with a UDP datagram to **10.0.0.2:4790** containing a 50-byte `INT1` payload (telemetry + mirrored 5-tuple fields). Clone session **1** → port 2 (configured in `topo/task2-p4runtime.json` and via `mirroring_add` on Thrift).
+When export mode is **udp** or **both**, egress clones a packet and replaces it with a UDP datagram to **10.0.0.2:4790** containing a 54-byte `INT1` payload (telemetry + mirrored 5-tuple fields). Clone session **1** → port 2 (configured in `topo/task2-p4runtime.json` and via `mirroring_add` on Thrift).
 
 ### Registers
 
@@ -561,7 +561,7 @@ task2/results/n_<N>/
     └── by_segment/ ...
 ```
 
-Generated by `plot_analysis.py` or `run_pipeline.py` (Task I plotting code + Task II bootstrap loader).
+Generated by `plot_capture_jsonl.py` or `pipeline_capture_jsonl.py` (Task I plotting code + `capture_jsonl_loader.py`). The **`n_10000`** tree is committed for [`task3_comparison.ipynb`](../notebooks/task3_comparison.ipynb).
 
 ---
 
@@ -581,22 +581,24 @@ task2/
 ├── data/                        # Replay PCAPs + captured telemetry
 ├── pcaps/                       # BMv2 per-port dumps (auto, gitignored)
 ├── logs/                        # Switch logs (gitignored)
-├── results/                     # Plots and statistical fits
+├── results/                     # Plots and statistical fits (n_10000 committed)
 ├── control_plane/
-│   ├── paths.py                 # Resolve /p4 vs repo root; import Task I analysis
-│   ├── telemetry.py             # Parse 32 B trailer + UDP INT payload
-│   ├── bootstrap.py             # PCAP/JSONL → Task I-compatible DataFrames
-│   ├── capture_packets.py       # pcap / live sniff / UDP INT → JSONL
-│   ├── set_export_mode.py       # Configure inband|udp|both on switch
-│   ├── controller.py            # Reset registers (Thrift)
+│   ├── repo_paths.py            # Resolve /p4 vs repo root; import Task I analysis
+│   ├── telemetry_decode.py      # Parse 32 B trailer + UDP INT payload
+│   ├── capture_jsonl_loader.py  # Capture JSONL → Task I-compatible DataFrames
+│   ├── capture_inband.py        # In-band telemetry: pcap or live sniff → JSONL
+│   ├── capture_udp_int.py       # UDP INT live sniff → JSONL
+│   ├── set_export_mode_thrift.py # Export mode via Thrift CLI
+│   ├── set_export_mode_grpc.py  # Export mode via P4Runtime gRPC
+│   ├── controller_thrift.py     # Reset registers (Thrift)
 │   ├── controller_grpc.py       # Reset via pipeline reload (gRPC)
-│   ├── bmv2_cli.py              # simple_switch_CLI helpers
+│   ├── bmv2_thrift.py           # simple_switch_CLI helpers
 │   ├── bmv2_grpc.py             # P4Runtime client (reset, read, export mode)
-│   ├── read_registers.py        # Dump flow registers (Thrift)
-│   ├── read_registers_grpc.py   # Dump registers (gRPC; fallback notes)
-│   ├── run_pipeline.py          # End-to-end: capture → plots + fits
-│   ├── plot_analysis.py         # Plots + fits from capture JSONL
-│   ├── loaders.py               # Wire Task I analysis to Task II bootstrap
+│   ├── read_registers_thrift.py # Dump flow registers (Thrift)
+│   ├── read_registers_grpc.py   # Dump registers via P4Runtime gRPC only
+│   ├── pipeline_capture_jsonl.py # End-to-end: capture → plots + fits
+│   ├── plot_capture_jsonl.py    # Plots + fits from capture JSONL
+│   ├── analysis_loader_bridge.py # Wire Task I analysis to capture JSONL loader
 │   └── results_paths.py         # Task II results root (wraps Task I helpers)
 ├── scripts/
 │   ├── prepare_trace.sh         # dump.gz → data/mawi_<N>.pcap
@@ -604,7 +606,7 @@ task2/
 │   ├── capture_on_h2.sh         # Mininet helper for h2 capture
 │   └── replay_on_h1.sh          # tcpreplay wrapper for h1
 ├── utils/
-│   ├── run_exercise.py          # Mininet launcher (make run / run-grpc)
+│   ├── run_exercise.py          # Mininet launcher (make run-thrift / run-grpc)
 │   ├── p4_mininet.py            # P4Host / P4Switch classes
 │   ├── p4runtime_switch.py      # P4Runtime-enabled switch for gRPC binary
 │   ├── netstat.py               # Port check helper
@@ -616,25 +618,27 @@ task2/
 │       ├── simple_controller.py # Load runtime JSON (tables, clone sessions)
 │       └── convert.py           # MAC/IP encoding for P4Runtime
 ├── docs/
-│   └── RUN_WITH_MAWI.md         # Step-by-step MAWI workflow
-├── notebooks/                   # (repo root) ../notebooks/task3_comparison.ipynb
+│   ├── RUN_WITH_MAWI.md         # Step-by-step MAWI workflow
+│   └── runbooks/                # Per-method runbook.md (capture + register readout)
 ├── Dockerfile                   # p4c + Mininet + Python analysis stack
 ├── docker-compose.yml           # Mounts task2→/p4, repo→/repo
 ├── Makefile                     # build, run, test-mawi, trace-prepare, …
 └── README.md                    # This file
 ```
 
-Python dependencies: repo-root **`requirements.txt`** (`task2/requirements.txt` includes it via `-r`).
+Python dependencies: repo-root **`requirements.txt`** (`task2/requirements.txt` includes it via `-r`). Task III notebook: [`../notebooks/task3_comparison.ipynb`](../notebooks/task3_comparison.ipynb).
 
 ### Control-plane scripts (quick reference)
 
 | Script | Purpose |
 |--------|---------|
-| `capture_packets.py` | `--pcap` / `--interface` / `--interface --int-udp` → JSONL |
-| `run_pipeline.py` | Parse capture + `plot_all()` + optional register dump |
-| `plot_analysis.py` | Plots/fits from existing `data/capture.jsonl` |
-| `set_export_mode.py` | `--mode inband\|udp\|both` or `--capture-mode …` |
-| `controller.py` / `controller_grpc.py` | Clear telemetry state before replay |
+| `capture_inband.py` | `--pcap` or `--interface` (in-band trailer) → JSONL |
+| `capture_udp_int.py` | `--interface` (UDP INT reports) → JSONL |
+| `pipeline_capture_jsonl.py` | Parse capture + `plot_all()` + optional register dump |
+| `plot_capture_jsonl.py` | Plots/fits from existing `data/capture.jsonl` |
+| `set_export_mode_thrift.py` | Thrift: `--mode inband\|udp\|both` or `--capture-mode …` |
+| `set_export_mode_grpc.py` | gRPC: same flags |
+| `controller_thrift.py` / `controller_grpc.py` | Clear telemetry state before replay |
 
 ---
 
@@ -646,13 +650,16 @@ Python dependencies: repo-root **`requirements.txt`** (`task2/requirements.txt` 
 | **Task II** | Switch telemetry → JSONL | `task2/data/capture.jsonl` |
 | **Task III** | Compare distributions, fits, limitations | `../notebooks/task3_comparison.ipynb` |
 
-Task II reuses Task I analysis modules by patching loaders in `bootstrap.py` / `plot_analysis.py` to read P4-derived `p4_flow_id`, switch timestamps (µs), and L3 byte counts.
+**Same trace, N = 10,000:** Task I analyzes the first 10,000 JSONL records from `201302011400`; Task II replays `data/mawi_10000.pcap` (first 10,000 frames from the same decompressed capture via `make trace-prepare`). The packet sequence matches; observables differ because Task II measures replayed, truncated frames plus in-band telemetry.
+
+Task II reuses Task I analysis modules via `analysis_loader_bridge.py` and `capture_jsonl_loader.py` to read P4-derived `p4_flow_id`, switch timestamps (µs), and L3 byte counts.
 
 Comparison notes:
 
-- Task I: wire timestamps, full frames (where available in JSONL)
-- Task II: switch clock, truncated MAWI frames on the wire, hash collision on 16 k flow slots
+- Task I: wire timestamps from the archive, tshark dissection, exact 5-tuple flows
+- Task II: switch clock, truncated replay frames on the wire, 32-byte trailer, hash collision on 16 k flow slots
 - Per-packet plots require **in-band or UDP capture**, not register dumps alone
+- **Scalability:** Task I observability at line rate would require full capture plus deep offline dissection; Task II computes per-packet metrics in the P4 pipeline and only parses lightweight telemetry offline (this homework still replays PCAP for a controlled comparison)
 
 ---
 
@@ -661,12 +668,12 @@ Comparison notes:
 | Problem | Fix |
 |---------|-----|
 | `No trace found` in prepare script | Put `201302011400.dump.gz` at repo root; check `/repo` mount in Docker |
-| `Mininet hosts not available` | Run `make run` or `make run-grpc` first; keep Mininet open |
+| `Mininet hosts not available` | Run `make run-thrift` or `make run-grpc` first; keep Mininet open |
 | Fewer than N captured packets | Lower `REPLAY_MULTIPLIER` (e.g. `0.0001`); reset registers before replay |
 | `No telemetry-tagged packets` | Capture on h2 or port-2 pcap; confirm replay h1→s1; export mode in-band |
-| UDP mode empty | `make build`; `set_export_mode.py --mode udp --use-grpc`; clone session configured |
-| Switch pcap missing | BMv2 creates it after first port-2 traffic; ensure `make run` (pcap dir enabled) |
-| `simple_switch_CLI not found` | Run inside Docker after `make run` |
+| UDP mode empty | `make build`; `set_export_mode_grpc.py --mode udp`; clone session configured |
+| Switch pcap missing | BMv2 creates it after first port-2 traffic; ensure `make run-thrift` (pcap dir enabled) |
+| `simple_switch_CLI not found` | Run inside Docker after `make run-thrift` |
 | gRPC `UNKNOWN` on register write | Expected on BMv2; use pipeline reload (`controller_grpc.py`) |
 | Statistical fits fail | Install `scipy` (`pip3 install scipy` or rebuild Docker image) |
 | P4 compile errors after edit | `make build`; check `p4src/task2.p4` syntax |
@@ -696,11 +703,11 @@ sudo python3 control_plane/controller_grpc.py   # terminal B
 REPLAY_MULTIPLIER=0.001 make test-mawi           # terminal B
 
 # Plot
-python3 control_plane/run_pipeline.py --capture-jsonl data/capture.jsonl
+python3 control_plane/pipeline_capture_jsonl.py --capture-jsonl data/capture.jsonl
 
 # Switch pcap path
 CAPTURE_MODE=switch REPLAY_MULTIPLIER=0.001 make test-mawi
-python3 control_plane/run_pipeline.py --pcap pcaps/s1-eth2.pcap -n 10000
+python3 control_plane/pipeline_capture_jsonl.py --pcap pcaps/s1-eth2.pcap -n 10000
 
 # Teardown
 make stop
